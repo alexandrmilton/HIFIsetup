@@ -12,6 +12,16 @@ export function LoginForm({ isSupabaseReady }: { isSupabaseReady: boolean }) {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  async function resetPassword() {
+    if (!isSupabaseReady || !email) { setMessage("Спершу введіть email вище."); return; }
+    setLoading(true);
+    setMessage(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback?next=/update-password` });
+    setMessage(error ? error.message : "Перевірте пошту — лист для відновлення пароля вже там.");
+    setLoading(false);
+  }
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isSupabaseReady) return;
@@ -20,8 +30,10 @@ export function LoginForm({ isSupabaseReady }: { isSupabaseReady: boolean }) {
     const supabase = createClient();
     const emailRedirectTo = `${window.location.origin}/auth/callback`;
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo } });
-      setMessage(error ? error.message : "Перевірте пошту — лист із підтвердженням вже там.");
+      const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo } });
+      if (error) setMessage(error.message);
+      else if (data.user && data.user.identities?.length === 0) setMessage("Акаунт із цим email вже існує. Увійдіть або натисніть «Забули пароль?».");
+      else setMessage("Перевірте пошту — лист із підтвердженням вже там.");
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMessage(error.message);
@@ -50,6 +62,7 @@ export function LoginForm({ isSupabaseReady }: { isSupabaseReady: boolean }) {
         <button className="button button-dark" type="submit" disabled={!isSupabaseReady || loading}>
           {loading ? "Зачекайте…" : mode === "signup" ? "Зареєструватися" : "Увійти"} <span>→</span>
         </button>
+        {mode === "signin" && <button type="button" className="text-link auth-forgot" onClick={resetPassword} disabled={!isSupabaseReady || loading}>Забули пароль?</button>}
       </form>
     </>
   );
