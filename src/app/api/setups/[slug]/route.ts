@@ -23,10 +23,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
   if (!setup) return NextResponse.json({ error: "Сетап не знайдено." }, { status: 404 });
   if (setup.owner_id !== userId) return NextResponse.json({ error: "Це не ваш сетап." }, { status: 403 });
 
-  const { error: updateError } = await supabase.from("setups")
-    .update({ ...setupColumns(body), moderation_status: "pending", reviewed_at: null })
-    .eq("id", setup.id);
-  if (updateError) return NextResponse.json({ error: "Не вдалося зберегти зміни." }, { status: 500 });
+  // Content columns are the only ones members hold UPDATE on; moderation state
+  // is reset through a definer function that can only move a setup back to
+  // `pending`, never approve it.
+  const { error: updateError } = await supabase.from("setups").update(setupColumns(body)).eq("id", setup.id);
+  if (updateError) {
+    console.error("PATCH setup", updateError);
+    return NextResponse.json({ error: "Не вдалося зберегти зміни." }, { status: 500 });
+  }
+
+  const { error: reviewError } = await supabase.rpc("request_setup_review", { p_slug: decode(slug) });
+  if (reviewError) {
+    console.error("request_setup_review", reviewError);
+    return NextResponse.json({ error: "Не вдалося надіслати на модерацію." }, { status: 500 });
+  }
 
   const relationError = await syncRelations(supabase, setup.id, userId, body);
   if (relationError) return NextResponse.json({ error: relationError }, { status: 500 });
