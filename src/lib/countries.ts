@@ -42,3 +42,7 @@ export const COUNTRIES: { code: string; uk: string; en: string }[] = [
 
 export const countryName = (code: string | null, locale: "uk" | "en") =>
   code ? COUNTRIES.find((country) => country.code === code)?.[locale] ?? code : null;
+
+/** "Київ, Україна", or just one of them, or an empty string — never a dash. */
+export const placeLabel = (city: string | null, country: string | null, locale: "uk" | "en") =>
+  [city && city !== "—" ? city : null, countryName(country, locale)].filter(Boolean).join(", ");

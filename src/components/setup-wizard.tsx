@@ -15,7 +15,7 @@ type DraftSetup = { title: string; location: string; description: string; isPubl
 
 // Keep covers small enough to stay within the free storage tier while still
 // looking sharp on a retina card. The bucket enforces the same ceiling.
-const MAX_COVER_MB = 4;
+const MAX_COVER_MB = 2;
 const MAX_COVER_BYTES = MAX_COVER_MB * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -26,7 +26,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
   const [step, setStep] = useState<Step>(1);
   const [setup, setSetup] = useState<DraftSetup>({
     title: existing?.title ?? "",
-    location: existing && existing.location !== "Україна" ? existing.location : "",
+    location: existing?.location ?? "",
     description: existing?.description ?? "",
     isPublished: existing?.isPublished ?? true,
     categoryIds: existing?.categoryIds ?? [],
@@ -44,6 +44,11 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
   const [extras, setExtras] = useState<AudioComponent[]>((existing?.components ?? []).filter((c) => c.isExtra));
   const [pickerTarget, setPickerTarget] = useState<"chain" | "extra" | null>(null);
   const [detecting, setDetecting] = useState(false);
+  // A country outside the list is stored as free text; "__other" is only a UI flag.
+  const [customCountry, setCustomCountry] = useState(() => {
+    const existingCode = existing?.country ?? "";
+    return existingCode && !COUNTRIES.some((country) => country.code === existingCode) ? existingCode : "";
+  });
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedSlug, setSavedSlug] = useState<string | null>(null);
@@ -97,7 +102,11 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
   function moveComponent(index: number, direction: -1 | 1) { setSelected((items) => { const next = [...items]; const target = index + direction; if (target < 0 || target >= next.length) return items; [next[index], next[target]] = [next[target], next[index]]; return next; }); }
   function removeComponent(id: string) { setSelected((items) => items.filter((item) => item.id !== id)); }
 
-  function goToComponents() { if (!setup.title.trim()) { setMessage({ type: "error", text: t.wizard.errNoTitle }); return; } setMessage(null); setStep(2); }
+  function goToComponents() {
+    if (!setup.title.trim()) { setMessage({ type: "error", text: t.wizard.errNoTitle }); return; }
+    if (!setup.country.trim()) { setMessage({ type: "error", text: t.wizard.errNoCountry }); return; }
+    setMessage(null); setStep(2);
+  }
   function goToPublish() { if (selected.length === 0) { setMessage({ type: "error", text: t.wizard.errNoComponents }); return; } setMessage(null); setStep(3); }
 
   async function saveSetup() {
@@ -141,10 +150,27 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
               <div className="field"><label htmlFor="setup-location">{t.wizard.city}</label><input id="setup-location" placeholder={t.wizard.cityPlaceholder} value={setup.location} onChange={(event) => setSetup({ ...setup, location: event.target.value })} /></div>
               <div className="field">
                 <label htmlFor="setup-country">{t.wizard.country}</label>
-                <select id="setup-country" value={setup.country} onChange={(event) => setSetup({ ...setup, country: event.target.value })}>
+                <select
+                  id="setup-country"
+                  value={customCountry ? "__other" : setup.country}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (value === "__other") { setCustomCountry(setup.country || " "); setSetup({ ...setup, country: "" }); }
+                    else { setCustomCountry(""); setSetup({ ...setup, country: value }); }
+                  }}
+                >
                   <option value="">{t.wizard.countryNone}</option>
                   {COUNTRIES.map((country) => <option key={country.code} value={country.code}>{country[locale]}</option>)}
+                  <option value="__other">{t.wizard.countryOther}</option>
                 </select>
+                {customCountry !== "" && (
+                  <input
+                    className="country-other"
+                    value={customCountry.trim()}
+                    onChange={(event) => { setCustomCountry(event.target.value || " "); setSetup({ ...setup, country: event.target.value }); }}
+                    placeholder={t.wizard.countryOtherPlaceholder}
+                  />
+                )}
                 <button type="button" className="text-link detect-link" onClick={detectCountry} disabled={detecting}>
                   {detecting ? t.wizard.detecting : t.wizard.detectLocation}
                 </button>

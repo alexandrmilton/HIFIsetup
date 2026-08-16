@@ -12,7 +12,7 @@ import { getSetup } from "@/lib/setups";
 import { getCurrentProfile, hasLikedSetup } from "@/lib/auth";
 import { getDictionary, getLocale } from "@/lib/i18n/server";
 import { componentMeta } from "@/lib/component-meta";
-import { countryName } from "@/lib/countries";
+import { placeLabel } from "@/lib/countries";
 
 export async function generateMetadata({ params }: PageProps<"/setups/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -62,7 +62,7 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
             <div className="setup-hero-copy">
               {!setup.isPublished && <span className="private-flag">{t.setup.privateFlag}</span>}
               <h1>{setup.title}</h1>
-              <p className="byline">{setup.owner} · {[setup.location, countryName(setup.country, locale)].filter(Boolean).join(", ")} · {setup.components.length} {t.setup.components}</p>
+              <p className="byline">{[setup.owner, placeLabel(setup.location, setup.country, locale), `${setup.components.length} ${t.setup.components}`].filter(Boolean).join(" · ")}</p>
               {setup.categories.length > 0 && <div className="setup-tags">{setup.categories.map((name) => <span className="setup-tag" key={name}>{name}</span>)}</div>}
               {setup.description && <p className="detail-description">{setup.description}</p>}
               <div className="setup-actions">

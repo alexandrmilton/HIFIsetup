@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { CurrentProfile } from "@/lib/auth";
 import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
-const MAX_MB = 4;
+const MAX_AVATAR_KB = 512;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export function ProfileForm({ profile, avatarUrl, t }: { profile: CurrentProfile; avatarUrl: string | null; t: Dictionary }) {
@@ -21,7 +21,7 @@ export function ProfileForm({ profile, avatarUrl, t }: { profile: CurrentProfile
 
   async function uploadAvatar(file: File) {
     if (!ALLOWED_TYPES.includes(file.type)) { setMessage({ type: "error", text: t.wizard.errFileType }); return; }
-    if (file.size > MAX_MB * 1024 * 1024) { setMessage({ type: "error", text: format(t.wizard.errFileSize, { mb: (file.size / 1024 / 1024).toFixed(1), max: MAX_MB }) }); return; }
+    if (file.size > MAX_AVATAR_KB * 1024) { setMessage({ type: "error", text: format(t.profile.avatarTooLarge, { kb: Math.round(file.size / 1024), max: MAX_AVATAR_KB }) }); return; }
 
     setUploading(true);
     setMessage(null);
@@ -64,6 +64,7 @@ export function ProfileForm({ profile, avatarUrl, t }: { profile: CurrentProfile
         <div>
           <button type="button" className="button button-outline button-small" onClick={() => fileInput.current?.click()} disabled={uploading}>{uploading ? t.profile.uploading : t.profile.changePhoto}</button>
           <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadAvatar(file); }} />
+          <small className="field-hint avatar-hint">{t.profile.avatarHint}</small>
         </div>
       </div>
       <form onSubmit={submit}>

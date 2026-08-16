@@ -9,7 +9,7 @@ export async function SiteFooter() {
 
   return (
     <footer className="site-footer">
-      <div className="shell footer-community">
+      <div className="shell footer-community" id="community">
         <div>
           <p className="eyebrow">{t.footer.communityEyebrow}</p>
           <h3>{t.footer.communityTitleLead} <strong>Меломанія_UA</strong></h3>

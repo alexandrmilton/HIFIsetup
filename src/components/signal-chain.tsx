@@ -2,22 +2,24 @@ import type { AudioComponent } from "@/lib/types";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { componentMeta } from "@/lib/component-meta";
 
-/** Thin tapered arrow — the line fades in and the head stays light, so a long
- *  chain reads as flow rather than as a row of heavy glyphs. */
+/** Three chevrons that brighten toward the next component. Drawn as plain
+ *  paths with literal colours — a gradient referenced by url(#id) breaks when
+ *  the same id repeats per arrow, and CSS vars are unreliable inside <stop>. */
 function ChainArrow() {
   return (
     <span className="schema-arrow" aria-hidden="true">
-      <svg viewBox="0 0 64 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          {/* Hex stops rather than var(): CSS custom properties are unreliable
-              inside SVG gradient stops across browsers. */}
-          <linearGradient id="chainFade" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#c4b5fd" />
-            <stop offset="100%" stopColor="#6d28d9" />
-          </linearGradient>
-        </defs>
-        <path d="M4 9 H46" stroke="url(#chainFade)" strokeWidth="2.6" strokeLinecap="round" />
-        <path d="M44 3.5 L51.5 9 L44 14.5" stroke="#6d28d9" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <svg viewBox="0 0 44 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {[0, 1, 2].map((step) => (
+          <path
+            key={step}
+            d={`M${5 + step * 13} 4 L${11 + step * 13} 8 L${5 + step * 13} 12`}
+            stroke="#6d28d9"
+            strokeOpacity={0.35 + step * 0.32}
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
       </svg>
     </span>
   );

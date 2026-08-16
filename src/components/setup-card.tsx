@@ -64,7 +64,7 @@ export function SetupCard({ setup, likedSlugs, isSignedIn, top, t }: { setup: Se
           <Link className="setup-title" href={`/setups/${setup.slug}`}>{setup.title}</Link>
           <CardLike slug={setup.slug} count={setup.likeCount} liked={likedSlugs.includes(setup.slug)} isSignedIn={isSignedIn} t={t} />
         </div>
-        <p className="setup-owner">{setup.owner} · {setup.location} · {setup.components.length} {t.card.components}</p>
+        <p className="setup-owner">{[setup.owner, setup.location, `${setup.components.length} ${t.card.components}`].filter(Boolean).join(" · ")}</p>
         {setup.categories.length > 0 && <div className="setup-tags">{setup.categories.slice(0, 3).map((name) => <span className="setup-tag" key={name}>{name}</span>)}</div>}
       </div>
     </div>
