@@ -31,11 +31,6 @@ export async function SiteFooter() {
             <Link href="/create">{t.hero.createOwn}</Link>
           </div>
           <div>
-            <h4>{t.footer.accountHeading}</h4>
-            <Link href="/login">{t.nav.signIn}</Link>
-            <Link href="/profile">{t.nav.profile}</Link>
-          </div>
-          <div>
             <h4>{t.footer.communityHeading}</h4>
             <a href={TELEGRAM_INVITE} target="_blank" rel="noreferrer">{t.footer.telegram}</a>
             <a href="/api/public/setups">{t.footer.api}</a>
