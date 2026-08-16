@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { UpdatePasswordForm } from "@/components/update-password-form";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 
@@ -14,6 +15,7 @@ export default function UpdatePasswordPage() {
           <UpdatePasswordForm isSupabaseReady={hasSupabaseEnv()} />
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

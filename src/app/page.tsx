@@ -2,13 +2,17 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { SetupCollection } from "@/components/setup-collection";
-import { CreatePanels } from "@/components/create-panels";
-import { getPublishedSetups, getCategories } from "@/lib/setups";
+import { HomeSidebar } from "@/components/home-sidebar";
+import { StatsStrip } from "@/components/stats-strip";
+import { getPublishedSetups, getCategories, getSiteStats } from "@/lib/setups";
+import { getCurrentProfile } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+
 export default async function Home() {
-  const [setups, categories] = await Promise.all([getPublishedSetups(), getCategories()]);
+  const [setups, categories, stats, profile] = await Promise.all([getPublishedSetups(), getCategories(), getSiteStats(), getCurrentProfile()]);
   return (
     <>
       <SiteHeader />
@@ -20,21 +24,24 @@ export default async function Home() {
             <p className="hero-lede">Досліджуйте реальні аудіо сетапи, діліться своїм та знаходьте нові ідеї.</p>
             <div className="hero-actions">
               <Link className="button button-dark" href="#setups">Досліджувати сетапи</Link>
-              <Link className="button button-outline" href="/create">Створити свій сетап</Link>
+              <Link className="button button-outline" href={profile ? "/create" : "/login?next=/create"}>Створити свій сетап</Link>
             </div>
           </div>
           <div className="hero-photo">
             <Image src="/setup-main.png" alt="Приклад Hi-Fi сетапу у вітальні" width={1536} height={1024} priority />
           </div>
         </section>
+
         <div className="home-layout shell">
           <div className="home-main">
             <SetupCollection setups={setups} categories={categories} />
           </div>
-          <CreatePanels />
+          <HomeSidebar isSignedIn={Boolean(profile)} categories={categories} setups={setups} />
         </div>
-        <section className="callout shell"><div><p className="eyebrow">Ваш підпис у звуці</p><h2>Зібрали щось своє?</h2><p>Від першої платівки до системи, яку збирали роками. Покажіть її людям, що зрозуміють.</p></div><Link className="button button-light" href="/create">Створити сетап <span>↗</span></Link></section>
+
+        <div className="shell"><StatsStrip stats={stats} /></div>
       </main>
+      <SiteFooter />
     </>
   );
 }

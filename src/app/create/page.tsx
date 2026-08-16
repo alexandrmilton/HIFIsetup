@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { SetupWizard } from "@/components/setup-wizard";
 import { getCategories } from "@/lib/setups";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
@@ -20,6 +21,7 @@ export default async function CreatePage() {
         </div>
         <SetupWizard categories={categories} isSupabaseReady={hasSupabaseEnv()} ownerId={profile?.id ?? null} />
       </main>
+      <SiteFooter />
     </>
   );
 }

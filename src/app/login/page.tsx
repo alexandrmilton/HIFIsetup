@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { LoginForm } from "@/components/login-form";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 
@@ -16,6 +17,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
           <LoginForm isSupabaseReady={hasSupabaseEnv()} next={typeof next === "string" && next.startsWith("/") ? next : "/"} />
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

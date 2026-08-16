@@ -14,7 +14,10 @@ export function SetupCard({ setup }: { setup: Setup }) {
       <div className="setup-meta">
         <div className="setup-title-line"><span className="setup-title">{setup.title}</span><span className="setup-location">{setup.location}</span></div>
         <p className="setup-owner">{setup.owner} · {setup.components.length} компоненти</p>
-        {setup.categories.length > 0 && <div className="setup-tags">{setup.categories.map((name) => <span className="setup-tag" key={name}>{name}</span>)}</div>}
+        <div className="setup-card-foot">
+          {setup.categories.length > 0 && <div className="setup-tags">{setup.categories.slice(0, 3).map((name) => <span className="setup-tag" key={name}>{name}</span>)}</div>}
+          <span className="card-likes" aria-label={`${setup.likeCount} вподобань`}>♡ {setup.likeCount}</span>
+        </div>
       </div>
     </Link>
   );

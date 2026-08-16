@@ -1,4 +1,6 @@
-import type { AudioComponent, Setup } from "@/lib/types";
+import type { AudioComponent, RoomDetails, Setup } from "@/lib/types";
+
+const emptyRoom: RoomDetails = { size: null, hasAcousticTreatment: null, acousticNotes: null, listeningNotes: null, budgetRange: null };
 
 export const demoComponents: AudioComponent[] = [
   { id: "f0d1e2a3-b4c5-46d7-8901-000000000001", brand: "Audio-Technica", model: "AT-LP7", category: "Програвач", origin: "standard" },
@@ -10,9 +12,9 @@ export const demoComponents: AudioComponent[] = [
 ];
 
 export const demoSetups: Setup[] = [
-  { slug: "soft-morning", title: "Soft Morning", location: "Львів", owner: "Андрій С.", vibe: "Вініл · 2 канали", description: "Невелика система для ранкових платівок, повільної кави й уважного слухання. Кожен предмет тут залишений лише тому, що додає щось до музики.", palette: { background: "#dce4dc", wall: "#e9ddc6" }, components: [demoComponents[0], demoComponents[4], demoComponents[2]], coverUrl: null, categories: ["Вініл"], isPublished: true },
-  { slug: "city-after-rain", title: "City after rain", location: "Київ", owner: "Марія К.", vibe: "Стрімінг · Nearfield", description: "Робоче місце, яке після шостої перетворюється на місце для альбомів цілком. Компактно, тихо, без зайвого блиску.", palette: { background: "#dce7e2", wall: "#cbd9d1" }, components: [demoComponents[1], demoComponents[2], demoComponents[5]], coverUrl: null, categories: ["Стрімінг", "Мінімалізм"], isPublished: true },
-  { slug: "walnut-and-warmth", title: "Walnut & warmth", location: "Дрогобич", owner: "Юрій Б.", vibe: "Handmade · Вініл", description: "Сетап навколо лампового підсилювача, зібраного місцевим майстром. Трохи дерева, трохи тепла — і багато старого соулу.", palette: { background: "#e6ded1", wall: "#d8b798" }, components: [demoComponents[0], demoComponents[4], demoComponents[5]], coverUrl: null, categories: ["DIY / Handmade", "Вініл"], isPublished: true },
+  { slug: "soft-morning", title: "Soft Morning", location: "Львів", owner: "Андрій С.", vibe: "Вініл · 2 канали", description: "Невелика система для ранкових платівок, повільної кави й уважного слухання. Кожен предмет тут залишений лише тому, що додає щось до музики.", palette: { background: "#dce4dc", wall: "#e9ddc6" }, components: [demoComponents[0], demoComponents[4], demoComponents[2]], coverUrl: null, categories: ["Вініл"], isPublished: true, likeCount: 0, room: emptyRoom },
+  { slug: "city-after-rain", title: "City after rain", location: "Київ", owner: "Марія К.", vibe: "Стрімінг · Nearfield", description: "Робоче місце, яке після шостої перетворюється на місце для альбомів цілком. Компактно, тихо, без зайвого блиску.", palette: { background: "#dce7e2", wall: "#cbd9d1" }, components: [demoComponents[1], demoComponents[2], demoComponents[5]], coverUrl: null, categories: ["Стрімінг", "Мінімалізм"], isPublished: true, likeCount: 0, room: emptyRoom },
+  { slug: "walnut-and-warmth", title: "Walnut & warmth", location: "Дрогобич", owner: "Юрій Б.", vibe: "Handmade · Вініл", description: "Сетап навколо лампового підсилювача, зібраного місцевим майстром. Трохи дерева, трохи тепла — і багато старого соулу.", palette: { background: "#e6ded1", wall: "#d8b798" }, components: [demoComponents[0], demoComponents[4], demoComponents[5]], coverUrl: null, categories: ["DIY / Handmade", "Вініл"], isPublished: true, likeCount: 0, room: emptyRoom },
 ];
 
 export const getDemoSetup = (slug: string) => demoSetups.find((setup) => setup.slug === slug);

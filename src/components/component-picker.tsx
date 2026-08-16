@@ -26,13 +26,16 @@ export function ComponentPicker({ onAdd, onClose }: { onAdd: (component: AudioCo
     return () => clearTimeout(timeout);
   }, [query]);
 
-  function pickFromCatalog(component: AudioComponent) { setPicked(component); setSubStep("details"); }
+  // A catalog hit already carries every field, so it is added on the single
+  // click; only manual entry needs the details step.
+  function pickFromCatalog(component: AudioComponent) { setPicked(component); onAdd(component); setSubStep("added"); }
   function startManual() { setPicked(null); setManual({ brand: query, model: "", category: categories[0], origin: "standard" }); setSubStep("details"); }
 
   function confirm() {
-    const component: AudioComponent = picked ?? { id: `new-${crypto.randomUUID()}`, brand: manual.brand.trim(), model: manual.model.trim(), category: manual.category, origin: manual.origin };
-    if (!component.brand.trim() || !component.model.trim()) return;
+    const component: AudioComponent = { id: `new-${crypto.randomUUID()}`, brand: manual.brand.trim(), model: manual.model.trim(), category: manual.category, origin: manual.origin };
+    if (!component.brand || !component.model) return;
     onAdd(component);
+    setPicked(component);
     setSubStep("added");
   }
 
@@ -67,24 +70,17 @@ export function ComponentPicker({ onAdd, onClose }: { onAdd: (component: AudioCo
       )}
 
       {subStep === "details" && (
-        picked ? (
-          <div className="picker-details">
-            <div className="draft-component"><span className="component-thumb" /><div><b>{picked.brand} {picked.model}</b><small>{picked.category}</small></div><OriginBadge origin={picked.origin} /></div>
-            <button className="button button-dark button-small" type="button" onClick={confirm}>Додати до сетапу</button>
-          </div>
-        ) : (
           <div className="picker-details">
             <div className="two-fields"><div className="field"><label htmlFor="manual-brand">Бренд або майстер</label><input id="manual-brand" value={manual.brand} onChange={(event) => setManual({ ...manual, brand: event.target.value })} placeholder="Oleh Audio" /></div><div className="field"><label htmlFor="manual-model">Назва моделі</label><input id="manual-model" value={manual.model} onChange={(event) => setManual({ ...manual, model: event.target.value })} placeholder="Ламповий SE" /></div></div>
             <div className="field"><label htmlFor="manual-category">Категорія</label><select id="manual-category" value={manual.category} onChange={(event) => setManual({ ...manual, category: event.target.value })}>{categories.map((category) => <option key={category}>{category}</option>)}</select></div>
             <div className="field"><label>Походження</label><div className="type-options">{(["standard", "handmade", "custom_order"] as ComponentOrigin[]).map((type) => <button key={type} className={`type-option type-option-${type} ${manual.origin === type ? "active" : ""}`} type="button" onClick={() => setManual({ ...manual, origin: type })}>{type === "standard" ? "Standard" : type === "handmade" ? "Зроблено власноруч" : "Під замовлення"}</button>)}</div></div>
             <button className="button button-dark button-small" type="button" onClick={confirm} disabled={!manual.brand.trim() || !manual.model.trim()}>Додати до сетапу</button>
           </div>
-        )
       )}
 
       {subStep === "added" && (
         <div className="picker-added">
-          <p className="form-success">Компонент додано до сетапу.</p>
+          <p className="form-success">{picked ? `${picked.brand} ${picked.model} — додано.` : "Компонент додано до сетапу."}</p>
           <div className="picker-added-actions"><button className="button button-outline button-small" type="button" onClick={addAnother}>Додати ще</button><button className="button button-dark button-small" type="button" onClick={onClose}>Готово</button></div>
         </div>
       )}

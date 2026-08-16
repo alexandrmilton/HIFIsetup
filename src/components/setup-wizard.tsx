@@ -7,13 +7,13 @@ import { ComponentPicker } from "@/components/component-picker";
 import type { AudioComponent, Category } from "@/lib/types";
 
 type Step = 1 | 2 | 3;
-type DraftSetup = { title: string; location: string; description: string; isPublished: boolean; categoryIds: string[] };
+type DraftSetup = { title: string; location: string; description: string; isPublished: boolean; categoryIds: string[]; roomSize: string; hasAcousticTreatment: boolean | null; acousticNotes: string; listeningNotes: string; budgetRange: string };
 
 const stepLabels: Record<Step, string> = { 1: "Інформація", 2: "Компоненти", 3: "Публікація" };
 
 export function SetupWizard({ categories, isSupabaseReady, ownerId }: { categories: Category[]; isSupabaseReady: boolean; ownerId: string | null }) {
   const [step, setStep] = useState<Step>(1);
-  const [setup, setSetup] = useState<DraftSetup>({ title: "", location: "", description: "", isPublished: true, categoryIds: [] });
+  const [setup, setSetup] = useState<DraftSetup>({ title: "", location: "", description: "", isPublished: true, categoryIds: [], roomSize: "", hasAcousticTreatment: null, acousticNotes: "", listeningNotes: "", budgetRange: "" });
   const [coverPath, setCoverPath] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -116,17 +116,63 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId }: { categori
 
         {step === 3 && (
           <section className="form-section">
-            <h2>3. Публікація</h2>
+            <h2>3. Кімната та публікація</h2>
             {savedSlug ? (
-              <>
+              <div className="publish-done">
                 <p className="form-success">{message?.text}</p>
-                <a className="button button-dark" href={`/setups/${savedSlug}`}>Переглянути сетап <span>→</span></a>
-              </>
+                <div className="publish-share">
+                  <p className="eyebrow">Посилання на сетап</p>
+                  <code className="publish-url">{typeof window !== "undefined" ? `${window.location.origin}/setups/${savedSlug}` : `/setups/${savedSlug}`}</code>
+                </div>
+                <div className="wizard-nav">
+                  <a className="button button-dark" href={`/setups/${savedSlug}`}>Переглянути сетап <span>→</span></a>
+                  <a className="button button-outline button-small" href="/profile">Мої сетапи</a>
+                </div>
+              </div>
             ) : (
               <>
-                <p>Перевірте деталі та збережіть сетап. {setup.isPublished ? "Він одразу зʼявиться на головній сторінці." : "Він буде приватним — доступним лише за прямим посиланням."}</p>
+                <p className="publish-lede">Ці деталі допомагають іншим зрозуміти, як звучить ваша система. Усі поля необовʼязкові.</p>
+
+                <div className="two-fields">
+                  <div className="field"><label htmlFor="room-size">Розмір кімнати</label><input id="room-size" placeholder="Напр. 4 × 5 м, 18 м²" value={setup.roomSize} onChange={(event) => setSetup({ ...setup, roomSize: event.target.value })} /></div>
+                  <div className="field"><label htmlFor="budget-range">Приблизний бюджет</label>
+                    <select id="budget-range" value={setup.budgetRange} onChange={(event) => setSetup({ ...setup, budgetRange: event.target.value })}>
+                      <option value="">Не вказувати</option>
+                      <option>до $500</option>
+                      <option>$500 – $1 500</option>
+                      <option>$1 500 – $5 000</option>
+                      <option>$5 000 – $15 000</option>
+                      <option>понад $15 000</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label>Акустична обробка кімнати</label>
+                  <div className="type-options">
+                    <button type="button" className={`type-option ${setup.hasAcousticTreatment === true ? "active" : ""}`} onClick={() => setSetup({ ...setup, hasAcousticTreatment: true })}>Так, є</button>
+                    <button type="button" className={`type-option ${setup.hasAcousticTreatment === false ? "active" : ""}`} onClick={() => setSetup({ ...setup, hasAcousticTreatment: false })}>Немає</button>
+                    <button type="button" className={`type-option ${setup.hasAcousticTreatment === null ? "active" : ""}`} onClick={() => setSetup({ ...setup, hasAcousticTreatment: null })}>Не вказувати</button>
+                  </div>
+                </div>
+
+                {setup.hasAcousticTreatment === true && (
+                  <div className="field"><label htmlFor="acoustic-notes">Що саме зроблено</label><textarea id="acoustic-notes" placeholder="Басові пастки в кутах, панелі в точках першого відбиття, килим…" value={setup.acousticNotes} onChange={(event) => setSetup({ ...setup, acousticNotes: event.target.value })} /></div>
+                )}
+
+                <div className="field"><label htmlFor="listening-notes">Враження від звучання</label><textarea id="listening-notes" placeholder="Як звучить система, під яку музику зібрана, що плануєте змінити…" value={setup.listeningNotes} onChange={(event) => setSetup({ ...setup, listeningNotes: event.target.value })} /></div>
+
+                <div className="publish-summary">
+                  <p className="eyebrow">Перед публікацією</p>
+                  <div className="summary-row"><span>Назва</span><strong>{setup.title || "—"}</strong></div>
+                  <div className="summary-row"><span>Компоненти</span><strong>{selected.length}</strong></div>
+                  <div className="summary-row"><span>Категорії</span><strong>{setup.categoryIds.length || "—"}</strong></div>
+                  <div className="summary-row"><span>Обкладинка</span><strong>{coverPath ? "Завантажено" : "Немає"}</strong></div>
+                  <div className="summary-row"><span>Видимість</span><strong>{setup.isPublished ? "Публічний" : "Приватний"}</strong></div>
+                </div>
+
                 {message && <p className={message.type === "error" ? "form-error" : "form-success"}>{message.text}</p>}
-                <div className="wizard-nav"><button className="button button-outline button-small" type="button" onClick={() => setStep(2)}>Назад</button><button className="button button-dark" type="button" onClick={saveSetup} disabled={saving}>{saving ? "Зберігаємо…" : "Зберегти сетап"} <span>→</span></button></div>
+                <div className="wizard-nav"><button className="button button-outline button-small" type="button" onClick={() => setStep(2)}>Назад</button><button className="button button-dark" type="button" onClick={saveSetup} disabled={saving}>{saving ? "Зберігаємо…" : "Опублікувати сетап"} <span>→</span></button></div>
               </>
             )}
           </section>
