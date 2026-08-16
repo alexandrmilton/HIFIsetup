@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Setup } from "@/lib/types";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
 function CopyButton({ slug, t }: { slug: string; t: Dictionary }) {
   const [copied, setCopied] = useState(false);
@@ -23,7 +23,7 @@ export function MySetups({ setups, t }: { setups: Setup[]; t: Dictionary }) {
   const statusLabels = { pending: t.admin.statusPending, approved: t.admin.statusApproved, rejected: t.admin.statusRejected };
 
   async function remove(slug: string, title: string) {
-    if (!confirm(t.admin.confirmDelete(title))) return;
+    if (!confirm(format(t.admin.confirmDelete, { title }))) return;
     setBusy(slug);
     await fetch(`/api/setups/${slug}`, { method: "DELETE" });
     setBusy(null);

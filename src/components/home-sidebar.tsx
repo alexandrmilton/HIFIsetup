@@ -1,14 +1,14 @@
 import Link from "next/link";
 import type { Category, Setup } from "@/lib/types";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 const relative = (iso: string | null, t: Dictionary) => {
   if (!iso) return "";
   const hours = Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000);
   if (hours < 1) return t.sidebar.justNow;
-  if (hours < 24) return t.sidebar.hoursAgo(hours);
-  return t.sidebar.daysAgo(Math.floor(hours / 24));
+  if (hours < 24) return format(t.sidebar.hoursAgo, { n: hours });
+  return format(t.sidebar.daysAgo, { n: Math.floor(hours / 24) });
 };
 
 /** Desktop-only sidebar. Everything here links somewhere real — no mock UI. */

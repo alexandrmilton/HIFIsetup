@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { OriginBadge } from "@/components/origin-badge";
 import { ComponentPicker } from "@/components/component-picker";
 import type { AudioComponent, Category, Setup } from "@/lib/types";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
 type Step = 1 | 2 | 3;
 type DraftSetup = { title: string; location: string; description: string; isPublished: boolean; categoryIds: string[]; roomSize: string; hasAcousticTreatment: boolean | null; acousticNotes: string; listeningNotes: string; budgetRange: string };
@@ -47,7 +47,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t 
     const file = event.target.files?.[0];
     if (!file || !isSupabaseReady || !ownerId) return;
     if (!ALLOWED_TYPES.includes(file.type)) { setMessage({ type: "error", text: t.wizard.errFileType }); return; }
-    if (file.size > MAX_COVER_BYTES) { setMessage({ type: "error", text: t.wizard.errFileSize((file.size / 1024 / 1024).toFixed(1), MAX_COVER_MB) }); return; }
+    if (file.size > MAX_COVER_BYTES) { setMessage({ type: "error", text: format(t.wizard.errFileSize, { mb: (file.size / 1024 / 1024).toFixed(1), max: MAX_COVER_MB }) }); return; }
 
     setUploadingCover(true);
     setMessage(null);

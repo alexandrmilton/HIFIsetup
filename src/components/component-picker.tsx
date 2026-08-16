@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { OriginBadge } from "@/components/origin-badge";
 import type { AudioComponent, ComponentOrigin } from "@/lib/types";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
 type SubStep = "search" | "details" | "added";
 
@@ -92,7 +92,7 @@ export function ComponentPicker({ onAdd, onClose, t }: { onAdd: (component: Audi
 
       {subStep === "added" && (
         <div className="picker-added">
-          <p className="form-success">{picked ? t.picker.added(`${picked.brand} ${picked.model}`) : t.picker.addedGeneric}</p>
+          <p className="form-success">{picked ? format(t.picker.added, { name: `${picked.brand} ${picked.model}` }) : t.picker.addedGeneric}</p>
           <div className="picker-added-actions"><button className="button button-outline button-small" type="button" onClick={addAnother}>{t.picker.addMore}</button><button className="button button-dark button-small" type="button" onClick={onClose}>{t.picker.done}</button></div>
         </div>
       )}

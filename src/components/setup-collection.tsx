@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { SetupCard } from "@/components/setup-card";
 import type { Category, Setup } from "@/lib/types";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
 const TOP_COUNT = 3;
 
@@ -83,7 +83,7 @@ export function SetupCollection({ setups, categories, likedSlugs, isSignedIn, t 
         </div>
         {rest.length > 0
           ? <div className="setup-grid">{rest.map((setup) => <SetupCard key={setup.slug} setup={setup} likedSlugs={likedSlugs} isSignedIn={isSignedIn} t={t} />)}</div>
-          : <p className="empty-collection">{query.trim() ? t.collection.emptyQuery(query.trim()) : active ? t.collection.emptyCategory : t.collection.emptyAll}</p>}
+          : <p className="empty-collection">{query.trim() ? format(t.collection.emptyQuery, { q: query.trim() }) : active ? t.collection.emptyCategory : t.collection.emptyAll}</p>}
       </section>
     </>
   );

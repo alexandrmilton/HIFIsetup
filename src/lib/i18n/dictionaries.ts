@@ -1,3 +1,6 @@
+// Every value here must be a plain string. React cannot serialise functions
+// across the server/client boundary, so use {placeholder} tokens with
+// format() instead of template helpers.
 export const LOCALES = ["uk", "en"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "uk";
@@ -17,7 +20,7 @@ const uk = {
     freshEyebrow: "Нові та оновлені", freshTitle: "Слухати очима",
     resultsEyebrow: "Результати", resultsTitle: "Знайдені сетапи",
     searchPlaceholder: "Пошук за назвою або автором", searchLabel: "Пошук сетапів", reset: "Скинути",
-    emptyQuery: (q: string) => `Нічого не знайдено за запитом «${q}».`,
+    emptyQuery: "Нічого не знайдено за запитом «{q}».",
     emptyCategory: "Поки немає сетапів у цій категорії.", emptyAll: "Поки немає опублікованих сетапів.",
   },
   card: { components: "комп.", top: "Топ", fresh: "Свіже оновлення", private: "Приватний", like: "Вподобати", unlike: "Прибрати вподобання" },
@@ -27,7 +30,7 @@ const uk = {
     ctaButton: "Створити сетап", ctaButtonGuest: "Увійти та створити",
     ctaNote: "Для створення сетапу потрібен акаунт.",
     freshTitle: "Свіжі оновлення", popularTitle: "Популярні напрямки",
-    justNow: "щойно", hoursAgo: (n: number) => `${n} год тому`, daysAgo: (n: number) => `${n} дн тому`,
+    justNow: "щойно", hoursAgo: "{n} год тому", daysAgo: "{n} дн тому",
   },
   stats: { setups: "сетапів", users: "користувачів", components: "компонентів", thisWeek: "за тиждень", daily: "нові оновлення", dailyValue: "Щодня" },
   footer: {
@@ -117,7 +120,7 @@ const uk = {
     savedEdit: "Зміни збережено. Сетап знову на модерації.",
     errNoTitle: "Вкажіть назву сетапу.", errNoComponents: "Додайте хоча б один компонент.",
     errFileType: "Підтримуються лише JPG, PNG або WebP.",
-    errFileSize: (mb: string, max: number) => `Файл завеликий (${mb} МБ). Максимум ${max} МБ.`,
+    errFileSize: "Файл завеликий ({mb} МБ). Максимум {max} МБ.",
     preview: "Попередній перегляд", previewTitle: "Назва вашого сетапу", previewCity: "Ваше місто",
     previewPublic: "публічно", previewPrivate: "приватно",
     statComponents: "Компоненти", statSpecial: "Особливі",
@@ -132,7 +135,7 @@ const uk = {
     model: "Назва моделі", modelPlaceholder: "Ламповий SE",
     category: "Категорія", origin: "Походження",
     standard: "Standard", handmade: "Зроблено власноруч", custom: "Під замовлення",
-    add: "Додати до сетапу", added: (name: string) => `${name} — додано.`,
+    add: "Додати до сетапу", added: "{name} — додано.",
     addedGeneric: "Компонент додано до сетапу.", addMore: "Додати ще", done: "Готово",
   },
   admin: {
@@ -148,7 +151,7 @@ const uk = {
     roleAdmin: "Адміністратор", roleModerator: "Модератор",
     makeModerator: "Зробити модератором", removeModerator: "Зняти модератора",
     fullRights: "Повні права", noName: "Без імені", setupCount: "сетап(ів)",
-    confirmDelete: (title: string) => `Видалити сетап «${title}» назавжди? Цю дію не можна скасувати.`,
+    confirmDelete: "Видалити сетап «{title}» назавжди? Цю дію не можна скасувати.",
   },
   notFound: { title: "Цей сетап ще не звучить.", back: "Повернутися до сетапів" },
   origin: { standard: "Standard", handmade: "Handmade", custom_order: "Custom order" },
@@ -169,7 +172,7 @@ const en: typeof uk = {
     freshEyebrow: "New and updated", freshTitle: "Listen with your eyes",
     resultsEyebrow: "Results", resultsTitle: "Matching setups",
     searchPlaceholder: "Search by title or author", searchLabel: "Search setups", reset: "Reset",
-    emptyQuery: (q: string) => `Nothing found for “${q}”.`,
+    emptyQuery: "Nothing found for “{q}”.",
     emptyCategory: "No setups in this category yet.", emptyAll: "No published setups yet.",
   },
   card: { components: "comp.", top: "Top", fresh: "Just updated", private: "Private", like: "Like", unlike: "Remove like" },
@@ -179,7 +182,7 @@ const en: typeof uk = {
     ctaButton: "Create setup", ctaButtonGuest: "Sign in and create",
     ctaNote: "An account is required to create a setup.",
     freshTitle: "Recently updated", popularTitle: "Popular directions",
-    justNow: "just now", hoursAgo: (n: number) => `${n}h ago`, daysAgo: (n: number) => `${n}d ago`,
+    justNow: "just now", hoursAgo: "{n}h ago", daysAgo: "{n}d ago",
   },
   stats: { setups: "setups", users: "members", components: "components", thisWeek: "this week", daily: "new updates", dailyValue: "Daily" },
   footer: {
@@ -269,7 +272,7 @@ const en: typeof uk = {
     savedEdit: "Changes saved. The setup is under review again.",
     errNoTitle: "Enter a setup title.", errNoComponents: "Add at least one component.",
     errFileType: "Only JPG, PNG or WebP are supported.",
-    errFileSize: (mb: string, max: number) => `File is too large (${mb} MB). Maximum ${max} MB.`,
+    errFileSize: "File is too large ({mb} MB). Maximum {max} MB.",
     preview: "Preview", previewTitle: "Your setup title", previewCity: "Your city",
     previewPublic: "public", previewPrivate: "private",
     statComponents: "Components", statSpecial: "Special",
@@ -284,7 +287,7 @@ const en: typeof uk = {
     model: "Model name", modelPlaceholder: "Tube SE",
     category: "Category", origin: "Origin",
     standard: "Standard", handmade: "Handmade", custom: "Custom order",
-    add: "Add to setup", added: (name: string) => `${name} — added.`,
+    add: "Add to setup", added: "{name} — added.",
     addedGeneric: "Component added to the setup.", addMore: "Add another", done: "Done",
   },
   admin: {
@@ -300,12 +303,17 @@ const en: typeof uk = {
     roleAdmin: "Administrator", roleModerator: "Moderator",
     makeModerator: "Make moderator", removeModerator: "Remove moderator",
     fullRights: "Full rights", noName: "No name", setupCount: "setup(s)",
-    confirmDelete: (title: string) => `Delete the setup “${title}” permanently? This cannot be undone.`,
+    confirmDelete: "Delete the setup “{title}” permanently? This cannot be undone.",
   },
   notFound: { title: "This setup is not playing yet.", back: "Back to setups" },
   origin: { standard: "Standard", handmade: "Handmade", custom_order: "Custom order" },
   language: { label: "Language", uk: "UA", en: "EN" },
 };
+
+/** Fills {name} tokens in a dictionary string. */
+export function format(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) => String(values[key] ?? match));
+}
 
 export type Dictionary = typeof uk;
 export const dictionaries: Record<Locale, Dictionary> = { uk, en };

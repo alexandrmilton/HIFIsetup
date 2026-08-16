@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Setup } from "@/lib/types";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
 export function ModerationQueue({ setups, canDelete, t }: { setups: Setup[]; canDelete: boolean; t: Dictionary }) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export function ModerationQueue({ setups, canDelete, t }: { setups: Setup[]; can
   }
 
   async function remove(slug: string, title: string) {
-    if (!confirm(t.admin.confirmDelete(title))) return;
+    if (!confirm(format(t.admin.confirmDelete, { title }))) return;
     setBusy(slug);
     await fetch(`/api/setups/${slug}`, { method: "DELETE" });
     setBusy(null);

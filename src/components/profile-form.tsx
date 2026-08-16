@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { CurrentProfile } from "@/lib/auth";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
 const MAX_MB = 4;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -20,7 +20,7 @@ export function ProfileForm({ profile, avatarUrl, t }: { profile: CurrentProfile
 
   async function uploadAvatar(file: File) {
     if (!ALLOWED_TYPES.includes(file.type)) { setMessage({ type: "error", text: t.wizard.errFileType }); return; }
-    if (file.size > MAX_MB * 1024 * 1024) { setMessage({ type: "error", text: t.wizard.errFileSize((file.size / 1024 / 1024).toFixed(1), MAX_MB) }); return; }
+    if (file.size > MAX_MB * 1024 * 1024) { setMessage({ type: "error", text: format(t.wizard.errFileSize, { mb: (file.size / 1024 / 1024).toFixed(1), max: MAX_MB }) }); return; }
 
     setUploading(true);
     setMessage(null);
