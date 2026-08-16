@@ -18,9 +18,10 @@ export async function SiteHeader() {
         <nav className="nav-links" aria-label={t.nav.setups}>
           <Link href="/">{t.nav.setups}</Link>
           <Link href="/create">{t.nav.create}</Link>
-          <Link href="/about">{t.nav.about}</Link>
           <Link href="/#community">{t.nav.community}</Link>
-          {isStaff && <Link href="/admin">{t.nav.moderation}</Link>}
+          <Link href="/about">{t.nav.about}</Link>
+          {/* Staff-only, so it sits apart from the public links. */}
+          {isStaff && <Link className="nav-staff" href="/admin">{t.nav.moderation}</Link>}
         </nav>
         <div className="header-actions">
           <LanguageSwitcher locale={locale} t={t} />
