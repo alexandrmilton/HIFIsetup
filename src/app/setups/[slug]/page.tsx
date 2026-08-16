@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { OriginBadge } from "@/components/origin-badge";
 import { SiteHeader } from "@/components/site-header";
@@ -6,6 +7,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SignalChain } from "@/components/signal-chain";
 import { ShareLink } from "@/components/share-link";
 import { LikeButton } from "@/components/like-button";
+import { Comments } from "@/components/comments";
 import { getSetup } from "@/lib/setups";
 import { getCurrentProfile, hasLikedSetup } from "@/lib/auth";
 
@@ -25,6 +27,11 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
   const [setup, profile, liked] = await Promise.all([getSetup(slug), getCurrentProfile(), hasLikedSetup(slug)]);
   if (!setup) notFound();
 
+  const isOwner = Boolean(profile && setup.ownerId === profile.id);
+  const isAdmin = Boolean(profile?.isAdmin);
+  // Unapproved setups stay visible to their owner and to admins only.
+  if (setup.moderationStatus !== "approved" && !isOwner && !isAdmin) notFound();
+
   const room = setup.room;
   const roomFacts = [
     room.size && { label: "Розмір кімнати", value: room.size },
@@ -37,6 +44,14 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
       <SiteHeader />
       <main className="setup-page">
         <div className="shell">
+          {setup.moderationStatus !== "approved" && (
+            <div className={`status-banner status-banner-${setup.moderationStatus}`}>
+              {setup.moderationStatus === "pending"
+                ? "Цей сетап на модерації. Він зʼявиться на головній сторінці після схвалення — посилання поки бачите тільки ви."
+                : "Цей сетап відхилено модератором. Відредагуйте його й надішліть повторно."}
+            </div>
+          )}
+
           <div className="setup-hero">
             {setup.coverUrl
               ? <img className="setup-hero-photo" src={setup.coverUrl} alt={setup.title} />
@@ -50,6 +65,7 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
               <div className="setup-actions">
                 <LikeButton slug={setup.slug} initialCount={setup.likeCount} initiallyLiked={liked} isSignedIn={Boolean(profile)} />
                 <ShareLink title={setup.title} />
+                {isOwner && <Link className="button button-outline button-small" href={`/setups/${setup.slug}/edit`}>Редагувати</Link>}
               </div>
             </div>
           </div>
@@ -84,6 +100,8 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
               {room.listeningNotes && <div className="note-block"><p className="eyebrow">Враження від звучання</p><p>{room.listeningNotes}</p></div>}
             </section>
           )}
+
+          <Comments slug={setup.slug} initial={setup.comments} currentUserId={profile?.id ?? null} isAdmin={isAdmin} />
         </div>
       </main>
       <SiteFooter />

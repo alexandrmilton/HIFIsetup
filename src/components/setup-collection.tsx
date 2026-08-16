@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { SetupCard } from "@/components/setup-card";
 import type { Category, Setup } from "@/lib/types";
 
-export function SetupCollection({ setups, categories }: { setups: Setup[]; categories: Category[] }) {
+const TOP_COUNT = 3;
+
+export function SetupCollection({ setups, categories, likedSlugs, isSignedIn }: { setups: Setup[]; categories: Category[]; likedSlugs: string[]; isSignedIn: boolean }) {
   const [active, setActive] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
@@ -15,7 +17,16 @@ export function SetupCollection({ setups, categories }: { setups: Setup[]; categ
       .filter((setup) => !needle || `${setup.title} ${setup.owner}`.toLocaleLowerCase().includes(needle));
   }, [setups, active, query]);
 
-  // The track is rendered twice so the CSS marquee can loop seamlessly.
+  // Most-liked lead the page; the rest stay in recency order. Only show a top
+  // row when nothing is filtered and the likes actually mean something.
+  const showTop = !active && !query.trim();
+  const top = useMemo(
+    () => (showTop ? [...filtered].sort((a, b) => b.likeCount - a.likeCount).filter((setup) => setup.likeCount > 0).slice(0, TOP_COUNT) : []),
+    [filtered, showTop],
+  );
+  const topSlugs = new Set(top.map((setup) => setup.slug));
+  const rest = filtered.filter((setup) => !topSlugs.has(setup.slug));
+
   const track = [...categories, ...categories];
 
   return (
@@ -36,20 +47,31 @@ export function SetupCollection({ setups, categories }: { setups: Setup[]; categ
         </div>
       </section>
 
+      {top.length > 0 && (
+        <section className="collection collection-top">
+          <div className="section-heading">
+            <div><p className="eyebrow">🔥 Найкраще</p><h2>Топ сетапи</h2></div>
+          </div>
+          <div className="setup-grid">
+            {top.map((setup, index) => <SetupCard key={setup.slug} setup={setup} likedSlugs={likedSlugs} isSignedIn={isSignedIn} top={index + 1} />)}
+          </div>
+        </section>
+      )}
+
       <section className="collection" id="setups">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">{active ?? "Свіжі сетапи"}</p>
-            <h2>Слухати очима</h2>
+            <p className="eyebrow">{active ?? (showTop ? "Нові та оновлені" : "Результати")}</p>
+            <h2>{showTop ? "Слухати очима" : "Знайдені сетапи"}</h2>
           </div>
           <div className="collection-search">
             <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Пошук за назвою або автором" aria-label="Пошук сетапів" />
-            {active && <button className="text-link" onClick={() => setActive(null)}>Скинути фільтр</button>}
+            {active && <button className="text-link" onClick={() => setActive(null)}>Скинути</button>}
           </div>
         </div>
-        {filtered.length > 0
-          ? <div className="setup-grid">{filtered.map((setup) => <SetupCard key={setup.slug} setup={setup} />)}</div>
-          : <p className="empty-collection">{query.trim() ? `Нічого не знайдено за запитом «${query.trim()}».` : "Поки немає сетапів у цій категорії."}</p>}
+        {rest.length > 0
+          ? <div className="setup-grid">{rest.map((setup) => <SetupCard key={setup.slug} setup={setup} likedSlugs={likedSlugs} isSignedIn={isSignedIn} />)}</div>
+          : <p className="empty-collection">{query.trim() ? `Нічого не знайдено за запитом «${query.trim()}».` : active ? "Поки немає сетапів у цій категорії." : "Поки немає опублікованих сетапів."}</p>}
       </section>
     </>
   );

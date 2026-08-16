@@ -4,20 +4,38 @@ import { useRef, useState, type ChangeEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { OriginBadge } from "@/components/origin-badge";
 import { ComponentPicker } from "@/components/component-picker";
-import type { AudioComponent, Category } from "@/lib/types";
+import type { AudioComponent, Category, Setup } from "@/lib/types";
 
 type Step = 1 | 2 | 3;
 type DraftSetup = { title: string; location: string; description: string; isPublished: boolean; categoryIds: string[]; roomSize: string; hasAcousticTreatment: boolean | null; acousticNotes: string; listeningNotes: string; budgetRange: string };
 
 const stepLabels: Record<Step, string> = { 1: "Інформація", 2: "Компоненти", 3: "Публікація" };
 
-export function SetupWizard({ categories, isSupabaseReady, ownerId }: { categories: Category[]; isSupabaseReady: boolean; ownerId: string | null }) {
+// Keep covers small enough to stay within the free storage tier while still
+// looking sharp on a retina card. The bucket enforces the same ceiling.
+const MAX_COVER_MB = 4;
+const MAX_COVER_BYTES = MAX_COVER_MB * 1024 * 1024;
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+export function SetupWizard({ categories, isSupabaseReady, ownerId, existing }: { categories: Category[]; isSupabaseReady: boolean; ownerId: string | null; existing?: Setup }) {
+  const isEdit = Boolean(existing);
   const [step, setStep] = useState<Step>(1);
-  const [setup, setSetup] = useState<DraftSetup>({ title: "", location: "", description: "", isPublished: true, categoryIds: [], roomSize: "", hasAcousticTreatment: null, acousticNotes: "", listeningNotes: "", budgetRange: "" });
-  const [coverPath, setCoverPath] = useState<string | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [setup, setSetup] = useState<DraftSetup>({
+    title: existing?.title ?? "",
+    location: existing && existing.location !== "Україна" ? existing.location : "",
+    description: existing?.description ?? "",
+    isPublished: existing?.isPublished ?? true,
+    categoryIds: existing?.categoryIds ?? [],
+    roomSize: existing?.room.size ?? "",
+    hasAcousticTreatment: existing?.room.hasAcousticTreatment ?? null,
+    acousticNotes: existing?.room.acousticNotes ?? "",
+    listeningNotes: existing?.room.listeningNotes ?? "",
+    budgetRange: existing?.room.budgetRange ?? "",
+  });
+  const [coverPath, setCoverPath] = useState<string | null>(existing?.coverPath ?? null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(existing?.coverUrl ?? null);
   const [uploadingCover, setUploadingCover] = useState(false);
-  const [selected, setSelected] = useState<AudioComponent[]>([]);
+  const [selected, setSelected] = useState<AudioComponent[]>(existing?.components ?? []);
   const [showPicker, setShowPicker] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -27,10 +45,15 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId }: { categori
   async function uploadCover(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file || !isSupabaseReady || !ownerId) return;
+    if (!ALLOWED_TYPES.includes(file.type)) { setMessage({ type: "error", text: "Підтримуються лише JPG, PNG або WebP." }); return; }
+    if (file.size > MAX_COVER_BYTES) { setMessage({ type: "error", text: `Файл завеликий (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимум ${MAX_COVER_MB} МБ.` }); return; }
+
     setUploadingCover(true);
+    setMessage(null);
     const supabase = createClient();
-    const path = `covers/${ownerId}-${Date.now()}.${file.name.split(".").pop() ?? "jpg"}`;
-    const { error } = await supabase.storage.from("setup-images").upload(path, file, { upsert: true });
+    const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const path = `covers/${ownerId}-${Date.now()}.${extension}`;
+    const { error } = await supabase.storage.from("setup-images").upload(path, file, { upsert: true, contentType: file.type });
     setUploadingCover(false);
     if (error) { setMessage({ type: "error", text: error.message }); return; }
     setCoverPath(path);
@@ -48,12 +71,16 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId }: { categori
     if (!isSupabaseReady) { setMessage({ type: "error", text: "Додайте ключі Supabase у .env.local, щоб зберігати сетапи." }); return; }
     setSaving(true);
     setMessage(null);
-    const response = await fetch("/api/setups", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...setup, coverPath, components: selected }) });
+    const response = await fetch(isEdit ? `/api/setups/${existing!.slug}` : "/api/setups", {
+      method: isEdit ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...setup, coverPath, components: selected }),
+    });
     const payload = await response.json();
     setSaving(false);
     if (!response.ok) { setMessage({ type: "error", text: payload.error ?? "Не вдалося зберегти сетап." }); return; }
     setSavedSlug(payload.slug);
-    setMessage({ type: "success", text: setup.isPublished ? "Сетап опубліковано у стрічці." : "Сетап збережено як приватний." });
+    setMessage({ type: "success", text: isEdit ? "Зміни збережено. Сетап знову на модерації." : "Сетап надіслано на модерацію." });
   }
 
   return (
@@ -71,7 +98,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId }: { categori
           <section className="form-section">
             <h2>1. Про сетап</h2>
             <button type="button" className="cover-dropzone" onClick={() => coverInput.current?.click()} disabled={!isSupabaseReady}>
-              {coverPreview ? <img src={coverPreview} alt="" /> : <><span className="cover-dropzone-icon">📷</span><span>Додайте фото вашого сетапу</span><small>Перетягніть або натисніть для завантаження</small></>}
+              {coverPreview ? <img src={coverPreview} alt="" /> : <><span className="cover-dropzone-icon">📷</span><span>Додайте фото вашого сетапу</span><small>JPG, PNG або WebP · до {MAX_COVER_MB} МБ</small></>}
               {uploadingCover && <small>Завантажуємо…</small>}
             </button>
             <input ref={coverInput} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={uploadCover} />
@@ -119,7 +146,13 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId }: { categori
             <h2>3. Кімната та публікація</h2>
             {savedSlug ? (
               <div className="publish-done">
-                <p className="form-success">{message?.text}</p>
+                <div className="moderation-notice">
+                  <span className="moderation-notice-icon" aria-hidden="true">🕓</span>
+                  <div>
+                    <strong>Сетап надіслано на модерацію</strong>
+                    <p>Щойно модератор його схвалить, сетап зʼявиться на головній сторінці, а посилання нижче стане доступним для всіх. Ви завжди бачите його у своєму профілі.</p>
+                  </div>
+                </div>
                 <div className="publish-share">
                   <p className="eyebrow">Посилання на сетап</p>
                   <code className="publish-url">{typeof window !== "undefined" ? `${window.location.origin}/setups/${savedSlug}` : `/setups/${savedSlug}`}</code>
@@ -172,7 +205,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId }: { categori
                 </div>
 
                 {message && <p className={message.type === "error" ? "form-error" : "form-success"}>{message.text}</p>}
-                <div className="wizard-nav"><button className="button button-outline button-small" type="button" onClick={() => setStep(2)}>Назад</button><button className="button button-dark" type="button" onClick={saveSetup} disabled={saving}>{saving ? "Зберігаємо…" : "Опублікувати сетап"} <span>→</span></button></div>
+                <div className="wizard-nav"><button className="button button-outline button-small" type="button" onClick={() => setStep(2)}>Назад</button><button className="button button-dark" type="button" onClick={saveSetup} disabled={saving}>{saving ? "Зберігаємо…" : isEdit ? "Зберегти зміни" : "Надіслати на модерацію"} <span>→</span></button></div>
               </>
             )}
           </section>

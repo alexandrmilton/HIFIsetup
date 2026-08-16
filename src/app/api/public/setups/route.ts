@@ -33,6 +33,7 @@ export async function GET(request: Request) {
       coverUrl: setup.coverUrl,
       categories: setup.categories,
       componentCount: setup.components.length,
+      likeCount: setup.likeCount,
     })),
   }, { headers: cors });
 }

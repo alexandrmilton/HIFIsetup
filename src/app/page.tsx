@@ -7,12 +7,15 @@ import { SetupCollection } from "@/components/setup-collection";
 import { HomeSidebar } from "@/components/home-sidebar";
 import { StatsStrip } from "@/components/stats-strip";
 import { getPublishedSetups, getCategories, getSiteStats } from "@/lib/setups";
-import { getCurrentProfile } from "@/lib/auth";
+import { getCurrentProfile, getLikedSlugs } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [setups, categories, stats, profile] = await Promise.all([getPublishedSetups(), getCategories(), getSiteStats(), getCurrentProfile()]);
+  const [setups, categories, stats, profile, likedSlugs] = await Promise.all([
+    getPublishedSetups(), getCategories(), getSiteStats(), getCurrentProfile(), getLikedSlugs(),
+  ]);
+
   return (
     <>
       <SiteHeader />
@@ -20,7 +23,7 @@ export default async function Home() {
         <section className="hero shell">
           <div className="hero-copy">
             <p className="eyebrow">Аудіо-сетапи, зібрані з любов’ю</p>
-            <h1>Натхнення для вашого <em>ідеального звуку</em>.</h1>
+            <h1>Ваша система заслуговує <em>на глядача</em>.</h1>
             <p className="hero-lede">Досліджуйте реальні аудіо сетапи, діліться своїм та знаходьте нові ідеї.</p>
             <div className="hero-actions">
               <Link className="button button-dark" href="#setups">Досліджувати сетапи</Link>
@@ -34,7 +37,7 @@ export default async function Home() {
 
         <div className="home-layout shell">
           <div className="home-main">
-            <SetupCollection setups={setups} categories={categories} />
+            <SetupCollection setups={setups} categories={categories} likedSlugs={likedSlugs} isSignedIn={Boolean(profile)} />
           </div>
           <HomeSidebar isSignedIn={Boolean(profile)} categories={categories} setups={setups} />
         </div>

@@ -14,6 +14,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   const { slug } = await params;
   const setup = await getSetup(slug);
   if (!setup) return NextResponse.json({ error: "Setup not found." }, { status: 404, headers: cors });
+  // Unmoderated content must not leak through the public API.
+  if (setup.moderationStatus !== "approved") return NextResponse.json({ error: "Setup not available." }, { status: 404, headers: cors });
 
   const url = new URL(request.url);
   return NextResponse.json({
@@ -26,6 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     coverUrl: setup.coverUrl,
     categories: setup.categories,
     isPublished: setup.isPublished,
+    likeCount: setup.likeCount,
     chain: setup.components.map((component, position) => ({
       position,
       id: component.id,

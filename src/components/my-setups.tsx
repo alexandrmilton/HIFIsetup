@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Setup } from "@/lib/types";
+
+const statusLabels = { pending: "На модерації", approved: "Схвалено", rejected: "Відхилено" } as const;
 
 function CopyButton({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false);
@@ -15,6 +18,17 @@ function CopyButton({ slug }: { slug: string }) {
 }
 
 export function MySetups({ setups }: { setups: Setup[] }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function remove(slug: string, title: string) {
+    if (!confirm(`Видалити сетап «${title}»? Цю дію не можна скасувати.`)) return;
+    setBusy(slug);
+    await fetch(`/api/setups/${slug}`, { method: "DELETE" });
+    setBusy(null);
+    router.refresh();
+  }
+
   if (setups.length === 0) return <p className="empty-collection">Ви ще не створили жодного сетапу. <Link className="text-link" href="/create">Створити перший</Link></p>;
 
   return (
@@ -26,12 +40,17 @@ export function MySetups({ setups }: { setups: Setup[] }) {
             : <span className="my-setup-thumb my-setup-thumb-empty" aria-hidden="true">🎵</span>}
           <div className="my-setup-body">
             <Link className="my-setup-title" href={`/setups/${setup.slug}`}>{setup.title}</Link>
-            <p>
+            <p className="my-setup-pills">
+              <span className={`status-pill status-pill-${setup.moderationStatus}`}>{statusLabels[setup.moderationStatus]}</span>
               <span className={setup.isPublished ? "visibility-pill public" : "visibility-pill private"}>{setup.isPublished ? "Публічний" : "Приватний"}</span>
-              <span className="my-setup-meta">{setup.components.length} компоненти · ♡ {setup.likeCount}</span>
+              <span className="my-setup-meta">{setup.components.length} комп. · ♡ {setup.likeCount}</span>
             </p>
           </div>
-          <CopyButton slug={setup.slug} />
+          <div className="my-setup-actions">
+            <Link className="button button-outline button-small" href={`/setups/${setup.slug}/edit`}>Редагувати</Link>
+            <CopyButton slug={setup.slug} />
+            <button className="button button-small danger-button" disabled={busy === setup.slug} onClick={() => remove(setup.slug, setup.title)}>Видалити</button>
+          </div>
         </li>
       ))}
     </ul>

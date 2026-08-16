@@ -19,6 +19,10 @@ Migrations live in `supabase/migrations/` and have all been applied to the conne
 - `categories`, `setup_categories` — genre/direction tags (Вініл, Джаз, Хай-енд, DIY…) shown as the marquee filters.
 - `standard`, `handmade`, `custom_order` are a PostgreSQL enum. A member's own component stays a regular `components` row linked through `setup_components`, keeping the catalogue normalized while preserving its origin.
 
+### Moderation
+
+Every new or edited setup enters the queue as `moderation_status = 'pending'` and is invisible to everyone but its owner and admins. Admins (`profiles.is_admin`) approve or reject at `/admin`; only `approved` setups appear on the homepage, in the stats, and in the public API.
+
 ### Private setups
 
 A setup is either public (listed on the homepage) or private. Private setups stay out of every listing query but remain reachable by direct link. That is served by the `get_setup_detail(slug)` SQL function, which is `SECURITY DEFINER` and returns exactly one row for an exact slug match — so RLS on the underlying tables stays strict instead of being opened to `using(true)`.
@@ -35,10 +39,16 @@ Read-only, CORS-enabled, no auth — intended for the planned Telegram bot. Fiel
 | `GET /api/public/setups/{slug}` | One setup with its ordered `chain[]`. Works for private setups given the slug. 404 if unknown. |
 | `GET /api/public/categories` | All category `{ name, slug }` pairs. |
 
+Only approved setups are served. Cover uploads are limited to JPG/PNG/WebP up to 4 MB, enforced both client-side and by the storage bucket.
+
 ```bash
 curl https://hifisetup.vercel.app/api/public/setups?category=Вініл&limit=5
 curl https://hifisetup.vercel.app/api/public/setups/super-basovyi-setap-b7742c
 ```
+
+## Community
+
+The project is run alongside the **Меломанія_UA** Telegram community: https://t.me/+ZMM9P_56MPw4Mzgy
 
 ## Deployment
 
