@@ -16,13 +16,13 @@ export async function POST(request: Request) {
   const userId = claimsData?.claims?.sub;
   if (!userId) return NextResponse.json({ error: "Увійдіть." }, { status: 401 });
 
-  const { data: profile } = await supabase.from("profiles").select("is_admin, is_moderator").eq("id", userId).maybeSingle();
-  if (!profile?.is_admin && !profile?.is_moderator) return NextResponse.json({ error: "Недостатньо прав." }, { status: 403 });
-
-  const { error } = await supabase.from("setups")
-    .update({ moderation_status: body.status, moderation_note: body.note?.trim() || null, reviewed_at: new Date().toISOString() })
-    .eq("slug", body.slug);
-  if (error) return NextResponse.json({ error: "Не вдалося оновити статус." }, { status: 500 });
+  // moderation_status is not column-granted to `authenticated`; the definer
+  // function re-checks the caller's role, so a forged request cannot moderate.
+  const { error } = await supabase.rpc("moderate_setup", { p_slug: body.slug, p_status: body.status, p_note: body.note?.trim() || null });
+  if (error) {
+    const forbidden = error.code === "42501" || error.message.includes("not authorised");
+    return NextResponse.json({ error: forbidden ? "Недостатньо прав." : "Не вдалося оновити статус." }, { status: forbidden ? 403 : 500 });
+  }
 
   return NextResponse.json({ slug: body.slug, status: body.status });
 }

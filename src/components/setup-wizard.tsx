@@ -6,9 +6,12 @@ import { OriginBadge } from "@/components/origin-badge";
 import { ComponentPicker } from "@/components/component-picker";
 import type { AudioComponent, Category, Setup } from "@/lib/types";
 import { format, type Dictionary } from "@/lib/i18n/dictionaries";
+import { COUNTRIES } from "@/lib/countries";
+import { componentMeta } from "@/lib/component-meta";
+import type { Locale } from "@/lib/i18n/dictionaries";
 
 type Step = 1 | 2 | 3;
-type DraftSetup = { title: string; location: string; description: string; isPublished: boolean; categoryIds: string[]; roomSize: string; hasAcousticTreatment: boolean | null; acousticNotes: string; listeningNotes: string; budgetRange: string };
+type DraftSetup = { title: string; location: string; description: string; isPublished: boolean; categoryIds: string[]; country: string; roomSize: string; hasAcousticTreatment: boolean | null; acousticNotes: string; listeningNotes: string; budgetRange: string };
 
 // Keep covers small enough to stay within the free storage tier while still
 // looking sharp on a retina card. The bucket enforces the same ceiling.
@@ -18,7 +21,7 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const BUDGETS = ["до $500", "$500 – $1 500", "$1 500 – $5 000", "$5 000 – $15 000", "понад $15 000"];
 
-export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t }: { categories: Category[]; isSupabaseReady: boolean; ownerId: string | null; existing?: Setup; t: Dictionary }) {
+export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t, locale }: { categories: Category[]; isSupabaseReady: boolean; ownerId: string | null; existing?: Setup; t: Dictionary; locale: Locale }) {
   const isEdit = Boolean(existing);
   const [step, setStep] = useState<Step>(1);
   const [setup, setSetup] = useState<DraftSetup>({
@@ -27,6 +30,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t 
     description: existing?.description ?? "",
     isPublished: existing?.isPublished ?? true,
     categoryIds: existing?.categoryIds ?? [],
+    country: existing?.country ?? "",
     roomSize: existing?.room.size ?? "",
     hasAcousticTreatment: existing?.room.hasAcousticTreatment ?? null,
     acousticNotes: existing?.room.acousticNotes ?? "",
@@ -36,8 +40,10 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t 
   const [coverPath, setCoverPath] = useState<string | null>(existing?.coverPath ?? null);
   const [coverPreview, setCoverPreview] = useState<string | null>(existing?.coverUrl ?? null);
   const [uploadingCover, setUploadingCover] = useState(false);
-  const [selected, setSelected] = useState<AudioComponent[]>(existing?.components ?? []);
-  const [showPicker, setShowPicker] = useState(false);
+  const [selected, setSelected] = useState<AudioComponent[]>((existing?.components ?? []).filter((c) => !c.isExtra));
+  const [extras, setExtras] = useState<AudioComponent[]>((existing?.components ?? []).filter((c) => c.isExtra));
+  const [pickerTarget, setPickerTarget] = useState<"chain" | "extra" | null>(null);
+  const [detecting, setDetecting] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedSlug, setSavedSlug] = useState<string | null>(null);
@@ -61,6 +67,32 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t 
     setCoverPreview(URL.createObjectURL(file));
   }
 
+  // Only ask the browser when the member opts in; a denial simply leaves the
+  // dropdown untouched rather than guessing.
+  async function detectCountry() {
+    if (!navigator.geolocation) { setMessage({ type: "error", text: t.wizard.detectFailed }); return; }
+    setDetecting(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=en`);
+          const data = await response.json();
+          const code = data?.countryCode as string | undefined;
+          if (code && COUNTRIES.some((country) => country.code === code)) {
+            setSetup((current) => ({ ...current, country: code, location: current.location || (data?.city ?? "") }));
+          } else {
+            setMessage({ type: "error", text: t.wizard.detectFailed });
+          }
+        } catch {
+          setMessage({ type: "error", text: t.wizard.detectFailed });
+        }
+        setDetecting(false);
+      },
+      () => { setDetecting(false); setMessage({ type: "error", text: t.wizard.detectFailed }); },
+      { timeout: 8000 },
+    );
+  }
+
   function toggleCategory(id: string) { setSetup((current) => ({ ...current, categoryIds: current.categoryIds.includes(id) ? current.categoryIds.filter((value) => value !== id) : [...current.categoryIds, id] })); }
   function moveComponent(index: number, direction: -1 | 1) { setSelected((items) => { const next = [...items]; const target = index + direction; if (target < 0 || target >= next.length) return items; [next[index], next[target]] = [next[target], next[index]]; return next; }); }
   function removeComponent(id: string) { setSelected((items) => items.filter((item) => item.id !== id)); }
@@ -75,7 +107,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t 
     const response = await fetch(isEdit ? `/api/setups/${existing!.slug}` : "/api/setups", {
       method: isEdit ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...setup, coverPath, components: selected }),
+      body: JSON.stringify({ ...setup, coverPath, components: selected, extras }),
     });
     const payload = await response.json();
     setSaving(false);
@@ -107,8 +139,18 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t 
             <div className="field"><label htmlFor="setup-description">{t.wizard.description}</label><textarea id="setup-description" placeholder={t.wizard.descriptionPlaceholder} value={setup.description} onChange={(event) => setSetup({ ...setup, description: event.target.value })} /></div>
             <div className="two-fields">
               <div className="field"><label htmlFor="setup-location">{t.wizard.city}</label><input id="setup-location" placeholder={t.wizard.cityPlaceholder} value={setup.location} onChange={(event) => setSetup({ ...setup, location: event.target.value })} /></div>
-              <div className="field"><label htmlFor="setup-visibility">{t.wizard.visibility}</label><select id="setup-visibility" value={setup.isPublished ? "public" : "private"} onChange={(event) => setSetup({ ...setup, isPublished: event.target.value === "public" })}><option value="public">{t.wizard.visibilityPublic}</option><option value="private">{t.wizard.visibilityPrivate}</option></select></div>
+              <div className="field">
+                <label htmlFor="setup-country">{t.wizard.country}</label>
+                <select id="setup-country" value={setup.country} onChange={(event) => setSetup({ ...setup, country: event.target.value })}>
+                  <option value="">{t.wizard.countryNone}</option>
+                  {COUNTRIES.map((country) => <option key={country.code} value={country.code}>{country[locale]}</option>)}
+                </select>
+                <button type="button" className="text-link detect-link" onClick={detectCountry} disabled={detecting}>
+                  {detecting ? t.wizard.detecting : t.wizard.detectLocation}
+                </button>
+              </div>
             </div>
+            <div className="field"><label htmlFor="setup-visibility">{t.wizard.visibility}</label><select id="setup-visibility" value={setup.isPublished ? "public" : "private"} onChange={(event) => setSetup({ ...setup, isPublished: event.target.value === "public" })}><option value="public">{t.wizard.visibilityPublic}</option><option value="private">{t.wizard.visibilityPrivate}</option></select></div>
             <div className="field"><label>{t.wizard.category}</label><div className="type-options">{categories.map((category) => <button key={category.id} type="button" className={`type-option ${setup.categoryIds.includes(category.id) ? "active" : ""}`} onClick={() => toggleCategory(category.id)}>{category.name}</button>)}</div></div>
             {message && <p className={message.type === "error" ? "form-error" : "form-success"}>{message.text}</p>}
             <button className="button button-dark" type="button" onClick={goToComponents}>{t.wizard.next1} <span>→</span></button>
@@ -118,14 +160,15 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t 
         {step === 2 && (
           <section className="form-section">
             <h2>{t.wizard.componentsStep}</h2>
-            {!showPicker && <button className="button button-outline button-small" type="button" onClick={() => setShowPicker(true)}>{t.wizard.addComponent}</button>}
-            {showPicker && <ComponentPicker onAdd={(component) => setSelected((items) => [...items, component])} onClose={() => setShowPicker(false)} t={t} />}
+            <p className="eyebrow">{t.wizard.mainChain}</p>
+            {pickerTarget !== "chain" && <button className="button button-outline button-small" type="button" onClick={() => setPickerTarget("chain")}>{t.wizard.addComponent}</button>}
+            {pickerTarget === "chain" && <ComponentPicker onAdd={(component) => setSelected((items) => [...items, component])} onClose={() => setPickerTarget(null)} t={t} />}
             {selected.length > 0 && (
               <div className="draft-components">
-                <p className="eyebrow" style={{ marginTop: 18 }}>{t.wizard.chainHint}</p>
+                <p className="chain-hint">{t.wizard.chainHint}</p>
                 {selected.map((item, index) => (
-                  <div className="draft-component chain-editable" key={item.id}>
-                    <span className="component-thumb" />
+                  <div className="draft-component chain-editable" key={`${item.id}-${index}`}>
+                    <span className="component-icon" aria-hidden="true">{componentMeta(item.category).icon}</span>
                     <div><b>{item.brand} {item.model}</b><small>{item.category}</small></div>
                     <OriginBadge origin={item.origin} t={t} />
                     <div className="chain-move">
@@ -137,6 +180,25 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t 
                 ))}
               </div>
             )}
+
+            <div className="extras-block">
+              <p className="eyebrow">{t.wizard.extras}</p>
+              <p className="chain-hint">{t.wizard.extrasHint}</p>
+              {pickerTarget !== "extra" && <button className="button button-outline button-small" type="button" onClick={() => setPickerTarget("extra")}>{t.wizard.addExtra}</button>}
+              {pickerTarget === "extra" && <ComponentPicker onAdd={(component) => setExtras((items) => [...items, component])} onClose={() => setPickerTarget(null)} t={t} />}
+              {extras.length > 0 && (
+                <div className="draft-components">
+                  {extras.map((item, index) => (
+                    <div className="draft-component is-extra" key={`${item.id}-extra-${index}`}>
+                      <span className="component-icon" aria-hidden="true">{componentMeta(item.category).icon}</span>
+                      <div><b>{item.brand} {item.model}</b><small>{item.category}</small></div>
+                      <OriginBadge origin={item.origin} t={t} />
+                      <button className="remove" type="button" aria-label={`${t.wizard.remove} ${item.model}`} onClick={() => setExtras((items) => items.filter((_, i) => i !== index))}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             {message && <p className={message.type === "error" ? "form-error" : "form-success"}>{message.text}</p>}
             <div className="wizard-nav"><button className="button button-outline button-small" type="button" onClick={() => setStep(1)}>{t.wizard.back}</button><button className="button button-dark" type="button" onClick={goToPublish}>{t.wizard.next2} <span>→</span></button></div>
           </section>

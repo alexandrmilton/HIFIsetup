@@ -5,12 +5,12 @@ import { SetupWizard } from "@/components/setup-wizard";
 import { getCategories } from "@/lib/setups";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { getCurrentProfile } from "@/lib/auth";
-import { getDictionary } from "@/lib/i18n/server";
+import { getDictionary, getLocale } from "@/lib/i18n/server";
 
 export default async function CreatePage() {
   const profile = hasSupabaseEnv() ? await getCurrentProfile() : null;
   if (hasSupabaseEnv() && !profile) redirect("/login?next=/create");
-  const [categories, t] = await Promise.all([getCategories(), getDictionary()]);
+  const [categories, t, locale] = await Promise.all([getCategories(), getDictionary(), getLocale()]);
 
   return (
     <>
@@ -21,7 +21,7 @@ export default async function CreatePage() {
           <h1>{t.wizard.pageTitle}</h1>
           <p>{t.wizard.pageLede}</p>
         </div>
-        <SetupWizard categories={categories} isSupabaseReady={hasSupabaseEnv()} ownerId={profile?.id ?? null} t={t} />
+        <SetupWizard categories={categories} isSupabaseReady={hasSupabaseEnv()} ownerId={profile?.id ?? null} t={t} locale={locale} />
       </main>
       <SiteFooter />
     </>

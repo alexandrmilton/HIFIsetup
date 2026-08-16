@@ -3,8 +3,7 @@ import Image from "next/image";
 
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { SetupCollection } from "@/components/setup-collection";
-import { HomeSidebar } from "@/components/home-sidebar";
+import { HomeBrowse } from "@/components/home-browse";
 import { StatsStrip } from "@/components/stats-strip";
 import { getPublishedSetups, getCategories, getSiteStats } from "@/lib/setups";
 import { getCurrentProfile, getLikedSlugs } from "@/lib/auth";
@@ -36,12 +35,7 @@ export default async function Home() {
           </div>
         </section>
 
-        <div className="home-layout shell">
-          <div className="home-main">
-            <SetupCollection setups={setups} categories={categories} likedSlugs={likedSlugs} isSignedIn={Boolean(profile)} t={t} />
-          </div>
-          <HomeSidebar isSignedIn={Boolean(profile)} categories={categories} setups={setups} t={t} />
-        </div>
+        <HomeBrowse setups={setups} categories={categories} likedSlugs={likedSlugs} isSignedIn={Boolean(profile)} t={t} />
 
         <div className="shell"><StatsStrip stats={stats} t={t} /></div>
       </main>

@@ -10,7 +10,9 @@ import { LikeButton } from "@/components/like-button";
 import { Comments } from "@/components/comments";
 import { getSetup } from "@/lib/setups";
 import { getCurrentProfile, hasLikedSetup } from "@/lib/auth";
-import { getDictionary } from "@/lib/i18n/server";
+import { getDictionary, getLocale } from "@/lib/i18n/server";
+import { componentMeta } from "@/lib/component-meta";
+import { countryName } from "@/lib/countries";
 
 export async function generateMetadata({ params }: PageProps<"/setups/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -25,7 +27,7 @@ export async function generateMetadata({ params }: PageProps<"/setups/[slug]">):
 
 export default async function SetupPage({ params }: PageProps<"/setups/[slug]">) {
   const { slug } = await params;
-  const [setup, profile, liked, t] = await Promise.all([getSetup(slug), getCurrentProfile(), hasLikedSetup(slug), getDictionary()]);
+  const [setup, profile, liked, t, locale] = await Promise.all([getSetup(slug), getCurrentProfile(), hasLikedSetup(slug), getDictionary(), getLocale()]);
   if (!setup) notFound();
 
   const isOwner = Boolean(profile && setup.ownerId === profile.id);
@@ -33,6 +35,8 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
   // Unapproved setups stay visible to their owner and to staff only.
   if (setup.moderationStatus !== "approved" && !isOwner && !isStaff) notFound();
 
+  const chain = setup.components.filter((component) => !component.isExtra);
+  const extras = setup.components.filter((component) => component.isExtra);
   const room = setup.room;
   const roomFacts = [
     room.size && { label: t.setup.roomSize, value: room.size },
@@ -58,7 +62,7 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
             <div className="setup-hero-copy">
               {!setup.isPublished && <span className="private-flag">{t.setup.privateFlag}</span>}
               <h1>{setup.title}</h1>
-              <p className="byline">{setup.owner} · {setup.location} · {setup.components.length} {t.setup.components}</p>
+              <p className="byline">{setup.owner} · {[setup.location, countryName(setup.country, locale)].filter(Boolean).join(", ")} · {setup.components.length} {t.setup.components}</p>
               {setup.categories.length > 0 && <div className="setup-tags">{setup.categories.map((name) => <span className="setup-tag" key={name}>{name}</span>)}</div>}
               {setup.description && <p className="detail-description">{setup.description}</p>}
               <div className="setup-actions">
@@ -78,19 +82,43 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
           <SignalChain components={setup.components} t={t} />
 
           <section className="setup-components">
-            <p className="eyebrow">{t.setup.allComponents}</p>
-            <div className="component-grid">
-              {setup.components.map((component) => (
-                <div className="component-card" key={component.id}>
-                  <span className="component-thumb" />
-                  <div className="component-card-body">
-                    <small>{component.category}</small>
-                    <strong>{component.brand} {component.model}</strong>
-                  </div>
-                  <OriginBadge origin={component.origin} t={t} />
-                </div>
-              ))}
-            </div>
+            <p className="eyebrow">{t.setup.mainChain}</p>
+            <ul className="component-list">
+              {chain.map((component, index) => {
+                const meta = componentMeta(component.category);
+                return (
+                  <li className="component-row" key={`${component.id}-${index}`}>
+                    <span className={`component-icon tone-${meta.tone}`} aria-hidden="true">{meta.icon}</span>
+                    <div className="component-row-body">
+                      <small>{component.category}</small>
+                      <strong>{component.brand} {component.model}</strong>
+                    </div>
+                    <OriginBadge origin={component.origin} t={t} />
+                  </li>
+                );
+              })}
+            </ul>
+
+            {extras.length > 0 && (
+              <>
+                <p className="eyebrow extras-eyebrow">{t.setup.extras}</p>
+                <ul className="component-list is-extras">
+                  {extras.map((component, index) => {
+                    const meta = componentMeta(component.category);
+                    return (
+                      <li className="component-row" key={`${component.id}-extra-${index}`}>
+                        <span className={`component-icon tone-${meta.tone}`} aria-hidden="true">{meta.icon}</span>
+                        <div className="component-row-body">
+                          <small>{component.category}</small>
+                          <strong>{component.brand} {component.model}</strong>
+                        </div>
+                        <OriginBadge origin={component.origin} t={t} />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
           </section>
 
           {(room.acousticNotes || room.listeningNotes) && (

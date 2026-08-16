@@ -5,7 +5,7 @@ import { SetupWizard } from "@/components/setup-wizard";
 import { getCategories, getSetup, getSetupsByOwner } from "@/lib/setups";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { getCurrentProfile } from "@/lib/auth";
-import { getDictionary } from "@/lib/i18n/server";
+import { getDictionary, getLocale } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export default async function EditSetupPage({ params }: PageProps<"/setups/[slug
 
   // get_setup_detail returns category names, not ids; read the ids from the
   // owner's own rows so the chips start out selected.
-  const [owned, categories, t] = await Promise.all([getSetupsByOwner(profile.id), getCategories(), getDictionary()]);
+  const [owned, categories, t, locale] = await Promise.all([getSetupsByOwner(profile.id), getCategories(), getDictionary(), getLocale()]);
   const withIds = owned.find((candidate) => candidate.slug === setup.slug);
 
   return (
@@ -34,7 +34,7 @@ export default async function EditSetupPage({ params }: PageProps<"/setups/[slug
           <h1>{setup.title}</h1>
           <p>{t.wizard.editLede}</p>
         </div>
-        <SetupWizard categories={categories} isSupabaseReady ownerId={profile.id} existing={{ ...setup, categoryIds: withIds?.categoryIds ?? [] }} t={t} />
+        <SetupWizard categories={categories} isSupabaseReady ownerId={profile.id} existing={{ ...setup, categoryIds: withIds?.categoryIds ?? [] }} t={t} locale={locale} />
       </main>
       <SiteFooter />
     </>

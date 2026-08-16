@@ -4,17 +4,11 @@ import { useEffect, useState } from "react";
 import { OriginBadge } from "@/components/origin-badge";
 import type { AudioComponent, ComponentOrigin } from "@/lib/types";
 import { format, type Dictionary } from "@/lib/i18n/dictionaries";
+import { COMPONENT_CATEGORIES as categories, componentMeta } from "@/lib/component-meta";
 
 type SubStep = "search" | "details" | "added";
 
-const categories = [
-  "Підсилювач", "Попередній підсилювач", "Підсилювач потужності", "Акустика", "Студійні монітори",
-  "Бездротова акустика", "Сабвуфер", "Програвач", "Картридж", "Фонокоректор", "CD-програвач",
-  "Стример", "ЦАП", "Ресивер", "Навушники", "Внутрішньоканальні", "Підсилювач для навушників",
-  "Кабелі", "Стійка", "Підставка під акустику", "Віброізоляція", "Акустична обробка", "Живлення",
-  "Процесор / DSP", "Еквалайзер", "Медіа-сервер", "Котушковий магнітофон", "Касетна дека", "Тюнер",
-  "Догляд за вінілом", "Аксесуар",
-];
+// Category list lives with the icon map so the two never drift apart.
 
 export function ComponentPicker({ onAdd, onClose, t }: { onAdd: (component: AudioComponent) => void; onClose: () => void; t: Dictionary }) {
   const [subStep, setSubStep] = useState<SubStep>("search");
@@ -70,7 +64,7 @@ export function ComponentPicker({ onAdd, onClose, t }: { onAdd: (component: Audi
           {query.trim() && (
             <div className="search-results-static">
               {searching && <div className="search-empty">{t.picker.searching}</div>}
-              {!searching && results.map((item) => <button className="search-result" key={item.id} type="button" onClick={() => pickFromCatalog(item)}><span className="component-thumb" /><span><b>{item.brand} {item.model}</b><small>{item.category}</small></span><OriginBadge origin={item.origin} t={t} /></button>)}
+              {!searching && results.map((item) => <button className="search-result" key={item.id} type="button" onClick={() => pickFromCatalog(item)}><span className="component-icon" aria-hidden="true">{componentMeta(item.category).icon}</span><span><b>{item.brand} {item.model}</b><small>{item.category}</small></span><OriginBadge origin={item.origin} t={t} /></button>)}
               {!searching && results.length === 0 && <div className="search-empty">{t.picker.noMatch}</div>}
               <button type="button" className="text-link picker-manual-link" onClick={startManual}>{t.picker.manual}</button>
             </div>

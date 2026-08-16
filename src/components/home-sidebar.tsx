@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import type { Category, Setup } from "@/lib/types";
 import { format, type Dictionary } from "@/lib/i18n/dictionaries";
@@ -12,7 +14,7 @@ const relative = (iso: string | null, t: Dictionary) => {
 };
 
 /** Desktop-only sidebar. Everything here links somewhere real — no mock UI. */
-export function HomeSidebar({ isSignedIn, categories, setups, t }: { isSignedIn: boolean; categories: Category[]; setups: Setup[]; t: Dictionary }) {
+export function HomeSidebar({ isSignedIn, categories, setups, t, activeCategory, onSelectCategory }: { isSignedIn: boolean; categories: Category[]; setups: Setup[]; t: Dictionary; activeCategory: string | null; onSelectCategory: (name: string | null) => void }) {
   const counts = new Map<string, number>();
   for (const setup of setups) for (const name of setup.categories) counts.set(name, (counts.get(name) ?? 0) + 1);
   const top = categories
@@ -55,7 +57,16 @@ export function HomeSidebar({ isSignedIn, categories, setups, t }: { isSignedIn:
           <h3>{t.sidebar.popularTitle}</h3>
           <ul className="side-list">
             {top.map((category) => (
-              <li key={category.id}><Link href="#setups">{category.name}</Link><span>{category.count}</span></li>
+              <li key={category.id}>
+                <button
+                  type="button"
+                  className={activeCategory === category.name ? "side-filter active" : "side-filter"}
+                  onClick={() => onSelectCategory(activeCategory === category.name ? null : category.name)}
+                >
+                  {category.name}
+                </button>
+                <span>{category.count}</span>
+              </li>
             ))}
           </ul>
         </div>

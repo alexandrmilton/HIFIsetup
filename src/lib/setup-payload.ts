@@ -2,8 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AudioComponent, ComponentOrigin } from "@/lib/types";
 
 export type SetupPayload = {
-  title?: string; location?: string; description?: string; isPublished?: boolean;
-  coverPath?: string | null; categoryIds?: string[]; components?: AudioComponent[];
+  title?: string; location?: string; country?: string; description?: string; isPublished?: boolean;
+  coverPath?: string | null; categoryIds?: string[]; components?: AudioComponent[]; extras?: AudioComponent[];
   roomSize?: string; hasAcousticTreatment?: boolean | null; acousticNotes?: string;
   listeningNotes?: string; budgetRange?: string;
 };
@@ -13,6 +13,7 @@ const validOrigins = new Set<ComponentOrigin>(["standard", "handmade", "custom_o
 export const setupColumns = (body: SetupPayload) => ({
   title: body.title!.trim(),
   city: body.location?.trim() || null,
+  country: body.country?.trim() || null,
   description: body.description?.trim() || null,
   cover_path: body.coverPath || null,
   is_published: body.isPublished === true,
@@ -32,20 +33,45 @@ export function validate(body: SetupPayload): string | null {
 /** Inserts any manually-entered components, then rewrites the setup's ordered
  *  component chain and category tags to match the payload exactly. */
 export async function syncRelations(supabase: SupabaseClient, setupId: string, userId: string, body: SetupPayload): Promise<string | null> {
-  const componentIds: string[] = [];
+  // Manually entered components join the shared catalogue so it grows from use.
+  // Uniqueness is case-insensitive now, so look up an existing row first rather
+  // than relying on upsert's conflict target.
+  async function resolveId(component: AudioComponent): Promise<string | null> {
+    if (!component.id.startsWith("new-")) return component.id;
+    const brand = component.brand?.trim();
+    const model = component.model?.trim();
+    if (!brand || !model || !validOrigins.has(component.origin)) return null;
+
+    const { data: existing } = await supabase.from("components")
+      .select("id").ilike("brand", brand).ilike("model", model).maybeSingle();
+    if (existing) return existing.id;
+
+    const { data, error } = await supabase.from("components")
+      .insert({ brand, model, category: component.category || "Аксесуар", origin: component.origin, submitted_by: userId })
+      .select("id").single();
+    return error ? null : data.id;
+  }
+
+  const chainIds: string[] = [];
   for (const component of body.components ?? []) {
-    if (component.id.startsWith("new-") && component.brand?.trim() && component.model?.trim() && validOrigins.has(component.origin)) {
-      const { data, error } = await supabase.from("components")
-        .upsert({ brand: component.brand.trim(), model: component.model.trim(), category: component.category || "Інше", origin: component.origin, submitted_by: userId }, { onConflict: "brand,model" })
-        .select("id").single();
-      if (error || !data) return "Не вдалося додати власний компонент.";
-      componentIds.push(data.id);
-    } else componentIds.push(component.id);
+    const id = await resolveId(component);
+    if (!id) return "Не вдалося додати власний компонент.";
+    chainIds.push(id);
+  }
+
+  const extraIds: string[] = [];
+  for (const component of body.extras ?? []) {
+    const id = await resolveId(component);
+    if (!id) return "Не вдалося додати власний компонент.";
+    if (!chainIds.includes(id) && !extraIds.includes(id)) extraIds.push(id);
   }
 
   await supabase.from("setup_components").delete().eq("setup_id", setupId);
-  const { error: relationError } = await supabase.from("setup_components")
-    .insert(componentIds.map((componentId, position) => ({ setup_id: setupId, component_id: componentId, position })));
+  const rows = [
+    ...chainIds.map((componentId, position) => ({ setup_id: setupId, component_id: componentId, position, is_extra: false })),
+    ...extraIds.map((componentId, index) => ({ setup_id: setupId, component_id: componentId, position: chainIds.length + index, is_extra: true })),
+  ];
+  const { error: relationError } = await supabase.from("setup_components").insert(rows);
   if (relationError) return "Не вдалося зберегти компоненти.";
 
   await supabase.from("setup_categories").delete().eq("setup_id", setupId);

@@ -14,11 +14,13 @@ export async function POST(request: Request) {
   const userId = claimsData?.claims?.sub;
   if (!userId) return NextResponse.json({ error: "Увійдіть." }, { status: 401 });
 
-  const { data: me } = await supabase.from("profiles").select("is_admin").eq("id", userId).maybeSingle();
-  if (!me?.is_admin) return NextResponse.json({ error: "Недостатньо прав." }, { status: 403 });
-
-  const { error } = await supabase.from("profiles").update({ is_moderator: body.isModerator }).eq("id", body.userId);
-  if (error) return NextResponse.json({ error: "Не вдалося змінити роль." }, { status: 500 });
+  // is_moderator is not column-granted to `authenticated`; the definer function
+  // re-checks that the caller is an admin.
+  const { error } = await supabase.rpc("set_member_moderator", { p_user_id: body.userId, p_is_moderator: body.isModerator });
+  if (error) {
+    const forbidden = error.code === "42501" || error.message.includes("not authorised");
+    return NextResponse.json({ error: forbidden ? "Недостатньо прав." : "Не вдалося змінити роль." }, { status: forbidden ? 403 : 500 });
+  }
 
   return NextResponse.json({ userId: body.userId, isModerator: body.isModerator });
 }

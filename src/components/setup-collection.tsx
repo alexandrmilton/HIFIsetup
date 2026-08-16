@@ -7,9 +7,9 @@ import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
 const TOP_COUNT = 3;
 
-export function SetupCollection({ setups, categories, likedSlugs, isSignedIn, t }: { setups: Setup[]; categories: Category[]; likedSlugs: string[]; isSignedIn: boolean; t: Dictionary }) {
-  const [active, setActive] = useState<string | null>(null);
+export function SetupCollection({ setups, categories, likedSlugs, isSignedIn, t, active, onActiveChange }: { setups: Setup[]; categories: Category[]; likedSlugs: string[]; isSignedIn: boolean; t: Dictionary; active: string | null; onActiveChange: (name: string | null) => void }) {
   const [query, setQuery] = useState("");
+  const setActive = onActiveChange;
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
