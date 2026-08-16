@@ -31,9 +31,11 @@ export async function getPublishedSetups(): Promise<Setup[]> {
 }
 
 export async function getSetup(slug: string): Promise<Setup | undefined> {
-  if (!hasSupabaseEnv()) return getDemoSetup(slug);
+  // Older setups have percent-encoded Cyrillic slugs; decode so they still resolve.
+  const decoded = (() => { try { return decodeURIComponent(slug); } catch { return slug; } })();
+  if (!hasSupabaseEnv()) return getDemoSetup(decoded);
   const supabase = await createClient();
-  const { data } = await supabase.rpc("get_setup_detail", { p_slug: slug });
+  const { data } = await supabase.rpc("get_setup_detail", { p_slug: decoded });
   if (!data) return undefined;
   return mapRpcSetup(data as unknown as RpcSetup);
 }

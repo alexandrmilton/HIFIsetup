@@ -1,43 +1,63 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { OriginBadge } from "@/components/origin-badge";
-import { SetupVisual } from "@/components/setup-card";
 import { SiteHeader } from "@/components/site-header";
+import { SignalChain } from "@/components/signal-chain";
+import { ShareLink } from "@/components/share-link";
 import { getSetup } from "@/lib/setups";
+
+export async function generateMetadata({ params }: PageProps<"/setups/[slug]">): Promise<Metadata> {
+  const { slug } = await params;
+  const setup = await getSetup(slug);
+  if (!setup) return { title: "Сетап не знайдено — HiFiSetup" };
+  return {
+    title: `${setup.title} — HiFiSetup`,
+    description: setup.description,
+    openGraph: { title: setup.title, description: setup.description, images: setup.coverUrl ? [setup.coverUrl] : [] },
+  };
+}
 
 export default async function SetupPage({ params }: PageProps<"/setups/[slug]">) {
   const { slug } = await params;
   const setup = await getSetup(slug);
   if (!setup) notFound();
+
   return (
     <>
       <SiteHeader />
-      <main className="page-main shell">
-        <div className="detail-layout">
-          <SetupVisual setup={setup} detailed />
-          <article className="detail-copy">
-            <p className="eyebrow">{setup.vibe}</p>
-            <h1>{setup.title}</h1>
-            <p className="byline">Сетап {setup.owner} · {setup.location}</p>
-            {setup.categories.length > 0 && <div className="setup-tags" style={{ marginTop: 14 }}>{setup.categories.map((name) => <span className="setup-tag" key={name}>{name}</span>)}</div>}
-            <p className="detail-description">{setup.description}</p>
-            <div className="component-list">
-              <p className="eyebrow" style={{ marginTop: 22 }}>У системі</p>
-              {setup.components.map((component) => <div className="component-row" key={component.id}><div><small>{component.category}</small><strong>{component.brand} {component.model}</strong></div><OriginBadge origin={component.origin} /></div>)}
+      <main className="setup-page">
+        <div className="shell">
+          <div className="setup-hero">
+            {setup.coverUrl
+              ? <img className="setup-hero-photo" src={setup.coverUrl} alt={setup.title} />
+              : <div className="setup-hero-photo setup-hero-fallback" style={{ background: setup.palette.background }}><span>🎵</span></div>}
+            <div className="setup-hero-copy">
+              {!setup.isPublished && <span className="private-flag">Приватний · видно лише за посиланням</span>}
+              <h1>{setup.title}</h1>
+              <p className="byline">{setup.owner} · {setup.location} · {setup.components.length} компоненти</p>
+              {setup.categories.length > 0 && <div className="setup-tags">{setup.categories.map((name) => <span className="setup-tag" key={name}>{name}</span>)}</div>}
+              {setup.description && <p className="detail-description">{setup.description}</p>}
+              <ShareLink />
             </div>
-            {setup.components.length > 1 && (
-              <div className="connection-chain">
-                <p className="eyebrow" style={{ marginTop: 22 }}>Схема підключення</p>
-                <div className="chain-row">
-                  {setup.components.map((component, index) => (
-                    <div className="chain-item" key={component.id}>
-                      <div className="chain-node"><small>{component.category}</small><strong>{component.brand} {component.model}</strong></div>
-                      {index < setup.components.length - 1 && <span className="chain-arrow">→</span>}
-                    </div>
-                  ))}
+          </div>
+
+          <SignalChain components={setup.components} />
+
+          <section className="setup-components">
+            <p className="eyebrow">Усі компоненти</p>
+            <div className="component-grid">
+              {setup.components.map((component) => (
+                <div className="component-card" key={component.id}>
+                  <span className="component-thumb" />
+                  <div className="component-card-body">
+                    <small>{component.category}</small>
+                    <strong>{component.brand} {component.model}</strong>
+                  </div>
+                  <OriginBadge origin={component.origin} />
                 </div>
-              </div>
-            )}
-          </article>
+              ))}
+            </div>
+          </section>
         </div>
       </main>
     </>

@@ -1,6 +1,8 @@
-# roomtone
+# HiFiSetup
 
 Mobile-first Next.js application for sharing Hi‑Fi audio setups.
+
+Production: https://hifisetup.vercel.app
 
 ## Local launch
 
@@ -11,10 +13,33 @@ Without environment variables, the interface starts in demo mode. The catalogue 
 
 ## Database
 
-`supabase/migrations/0001_initial_schema.sql` has been applied to the connected Supabase project. It creates normalized `components`, `setups`, and `setup_components` tables, profiles, RLS policies, and the public `setup-images` bucket. The seed rows make the initial search catalogue work.
+Migrations live in `supabase/migrations/` and have all been applied to the connected Supabase project.
 
-`standard`, `handmade`, and `custom_order` are a PostgreSQL enum. A member’s own component remains a regular `components` row and is linked through `setup_components`, keeping the catalogue normalized while preserving its origin.
+- `components`, `setups`, `setup_components`, `profiles` — normalized catalogue, setups, and their ordered component chain.
+- `categories`, `setup_categories` — genre/direction tags (Вініл, Джаз, Хай-енд, DIY…) shown as the marquee filters.
+- `standard`, `handmade`, `custom_order` are a PostgreSQL enum. A member's own component stays a regular `components` row linked through `setup_components`, keeping the catalogue normalized while preserving its origin.
+
+### Private setups
+
+A setup is either public (listed on the homepage) or private. Private setups stay out of every listing query but remain reachable by direct link. That is served by the `get_setup_detail(slug)` SQL function, which is `SECURITY DEFINER` and returns exactly one row for an exact slug match — so RLS on the underlying tables stays strict instead of being opened to `using(true)`.
+
+Slugs are transliterated to ASCII (`Супер басовий сетап` → `super-basovyi-setap-a1b2c3`) so links never need percent-encoding.
+
+## Public API
+
+Read-only, CORS-enabled, no auth — intended for the planned Telegram bot. Field names are stable; new fields may be added, existing ones will not be renamed.
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /api/public/setups` | Published setups. Query: `category` (name), `limit` (max 100, default 20), `offset`. Returns `{ total, limit, offset, setups[] }`. |
+| `GET /api/public/setups/{slug}` | One setup with its ordered `chain[]`. Works for private setups given the slug. 404 if unknown. |
+| `GET /api/public/categories` | All category `{ name, slug }` pairs. |
+
+```bash
+curl https://hifisetup.vercel.app/api/public/setups?category=Вініл&limit=5
+curl https://hifisetup.vercel.app/api/public/setups/super-basovyi-setap-b7742c
+```
 
 ## Deployment
 
-Import the GitHub repository in Vercel, select the Next.js preset, then add the same two environment variables in Vercel → Settings → Environment Variables. In Supabase Auth, add both the Vercel URL and `http://localhost:3000` as redirect URLs.
+The GitHub repository is connected to Vercel; pushes to `main` deploy automatically. `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are set in Vercel → Settings → Environment Variables. In Supabase Auth → URL Configuration, both the production URL and `http://localhost:3000` are registered as redirect URLs.

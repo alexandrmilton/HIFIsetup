@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import type { AudioComponent, ComponentOrigin } from "@/lib/types";
+import { slugify } from "@/lib/slug";
 
 const validOrigins = new Set<ComponentOrigin>(["standard", "handmade", "custom_order"]);
-const slugify = (value: string) => value.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9а-яіїєґ]+/gi, "-").replace(/(^-|-$)/g, "") || "setup";
 
 export async function POST(request: Request) {
   if (!hasSupabaseEnv()) return NextResponse.json({ error: "Supabase не налаштований." }, { status: 503 });
