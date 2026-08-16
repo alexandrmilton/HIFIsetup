@@ -4,18 +4,18 @@ import { componentMeta } from "@/lib/component-meta";
 
 /** Thin tapered arrow — the line fades in and the head stays light, so a long
  *  chain reads as flow rather than as a row of heavy glyphs. */
-function ChainArrow({ vertical = false }: { vertical?: boolean }) {
+function ChainArrow() {
   return (
-    <span className={vertical ? "chain-arrow is-vertical" : "chain-arrow"} aria-hidden="true">
-      <svg viewBox="0 0 64 16" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <span className="schema-arrow" aria-hidden="true">
+      <svg viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="chainFade" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="var(--accent)" stopOpacity="1" />
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.95" />
           </linearGradient>
         </defs>
-        <path d="M2 8 H50" stroke="url(#chainFade)" strokeWidth="2" strokeLinecap="round" />
-        <path d="M45 3 L51 8 L45 13" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M3 8 H41" stroke="url(#chainFade)" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M36.5 3.5 L42 8 L36.5 12.5" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
       </svg>
     </span>
   );
@@ -37,8 +37,8 @@ function ChainNode({ component, index }: { component: AudioComponent; index: num
   );
 }
 
-/** The chain wraps into rows instead of running off one long line: each row
- *  flows left to right, and a return marker shows where the next row picks up. */
+/** The chain keeps the order the member arranged in the wizard (position), and
+ *  wraps into rows instead of running off one long line. */
 export function SignalChain({ components, t }: { components: AudioComponent[]; t: Dictionary }) {
   const chain = components.filter((component) => !component.isExtra);
   if (chain.length < 2) return null;

@@ -38,12 +38,12 @@ export default async function AdminPage() {
 
         <section className="admin-section">
           <h2>{t.admin.pending} ({pending.length})</h2>
-          <ModerationQueue setups={pending} canDelete={profile.isAdmin} t={t} />
+          <ModerationQueue setups={pending} canDelete={profile.isAdmin} t={t} searchable />
         </section>
 
         <section className="admin-section">
           <h2>{t.admin.reviewed} ({reviewed.length})</h2>
-          <ModerationQueue setups={reviewed} canDelete={profile.isAdmin} t={t} />
+          <ModerationQueue setups={reviewed} canDelete={profile.isAdmin} t={t} searchable />
         </section>
 
         {profile.isAdmin && (

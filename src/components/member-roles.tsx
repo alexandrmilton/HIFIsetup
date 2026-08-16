@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
@@ -8,7 +8,14 @@ export type Member = { id: string; display_name: string | null; username: string
 
 export function MemberRoles({ members, t }: { members: Member[]; t: Dictionary }) {
   const [busy, setBusy] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const router = useRouter();
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    if (!needle) return members;
+    return members.filter((member) => `${member.display_name ?? ""} ${member.username ?? ""}`.toLocaleLowerCase().includes(needle));
+  }, [members, query]);
 
   async function toggle(userId: string, isModerator: boolean) {
     setBusy(userId);
@@ -20,8 +27,19 @@ export function MemberRoles({ members, t }: { members: Member[]; t: Dictionary }
   if (members.length === 0) return <p className="empty-collection">{t.admin.noMembers}</p>;
 
   return (
-    <ul className="member-list">
-      {members.map((member) => (
+    <>
+      <input
+        className="admin-search"
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={t.admin.searchMembers}
+        aria-label={t.admin.searchMembers}
+      />
+      {visible.length === 0
+        ? <p className="empty-collection">{t.admin.noMatches}</p>
+        : <ul className="member-list">
+      {visible.map((member) => (
         <li className="member-item" key={member.id}>
           <span className="member-avatar" aria-hidden="true">{(member.display_name || "?").charAt(0).toUpperCase()}</span>
           <div className="member-body">
@@ -45,6 +63,7 @@ export function MemberRoles({ members, t }: { members: Member[]; t: Dictionary }
             )}
         </li>
       ))}
-    </ul>
+          </ul>}
+    </>
   );
 }

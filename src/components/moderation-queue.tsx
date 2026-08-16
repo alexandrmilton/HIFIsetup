@@ -1,14 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Setup } from "@/lib/types";
 import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
-export function ModerationQueue({ setups, canDelete, t }: { setups: Setup[]; canDelete: boolean; t: Dictionary }) {
+export function ModerationQueue({ setups, canDelete, t, searchable = false }: { setups: Setup[]; canDelete: boolean; t: Dictionary; searchable?: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const router = useRouter();
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    if (!needle) return setups;
+    return setups.filter((setup) => `${setup.title} ${setup.owner}`.toLocaleLowerCase().includes(needle));
+  }, [setups, query]);
 
   const statusLabels = { pending: t.admin.statusPending, approved: t.admin.statusApproved, rejected: t.admin.statusRejected };
 
@@ -30,8 +37,21 @@ export function ModerationQueue({ setups, canDelete, t }: { setups: Setup[]; can
   if (setups.length === 0) return <p className="empty-collection">{t.admin.emptyQueue}</p>;
 
   return (
-    <ul className="moderation-list">
-      {setups.map((setup) => (
+    <>
+      {searchable && (
+        <input
+          className="admin-search"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t.admin.searchSetups}
+          aria-label={t.admin.searchSetups}
+        />
+      )}
+      {visible.length === 0
+        ? <p className="empty-collection">{t.admin.noMatches}</p>
+        : <ul className="moderation-list">
+      {visible.map((setup) => (
         <li className={`moderation-item status-${setup.moderationStatus}`} key={setup.slug}>
           {setup.coverUrl
             ? <img className="moderation-thumb" src={setup.coverUrl} alt="" />
@@ -52,6 +72,7 @@ export function ModerationQueue({ setups, canDelete, t }: { setups: Setup[]; can
           </div>
         </li>
       ))}
-    </ul>
+          </ul>}
+    </>
   );
 }
