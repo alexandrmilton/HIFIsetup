@@ -15,9 +15,6 @@ export async function POST(request: Request) {
   const userId = claimsData?.claims?.sub;
   if (claimsError || !userId) return NextResponse.json({ error: "Увійдіть, щоб зберегти сетап." }, { status: 401 });
 
-  const { data: existingProfile } = await supabase.from("profiles").select("id").eq("id", userId).maybeSingle();
-  if (!existingProfile) await supabase.from("profiles").insert({ id: userId, display_name: claimsData.claims.email?.split("@")[0] ?? "Слухач" });
-
   // Every new setup enters the moderation queue; it only reaches the feed once
   // an admin approves it.
   const { data: createdSetup, error: setupError } = await supabase.from("setups")

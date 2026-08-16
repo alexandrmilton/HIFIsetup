@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
-export type Member = { id: string; display_name: string | null; username: string | null; is_admin: boolean; is_moderator: boolean; setup_count: number };
+export type Member = { id: string; display_name: string | null; is_admin: boolean; is_moderator: boolean; setup_count: number };
 
 export function MemberRoles({ members, t }: { members: Member[]; t: Dictionary }) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -14,7 +14,7 @@ export function MemberRoles({ members, t }: { members: Member[]; t: Dictionary }
   const visible = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
     if (!needle) return members;
-    return members.filter((member) => `${member.display_name ?? ""} ${member.username ?? ""}`.toLocaleLowerCase().includes(needle));
+    return members.filter((member) => (member.display_name ?? "").toLocaleLowerCase().includes(needle));
   }, [members, query]);
 
   async function toggle(userId: string, isModerator: boolean) {

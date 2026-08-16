@@ -20,9 +20,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const { data: setup } = await supabase.from("setups").select("id").eq("slug", decode(slug)).maybeSingle();
   if (!setup) return NextResponse.json({ error: "Сетап не знайдено." }, { status: 404 });
 
-  const { data: existingProfile } = await supabase.from("profiles").select("id").eq("id", userId).maybeSingle();
-  if (!existingProfile) await supabase.from("profiles").insert({ id: userId, display_name: claimsData?.claims?.email?.split("@")[0] ?? "Слухач" });
-
   const { data, error } = await supabase.from("setup_comments")
     .insert({ setup_id: setup.id, author_id: userId, body: text })
     .select("id, body, created_at").single();

@@ -40,7 +40,7 @@ const mapSetup = (row: DatabaseSetup, index = 0): Setup => {
   const categoryRows = (row.setup_categories ?? []).map((entry) => Array.isArray(entry.categories) ? entry.categories[0] : entry.categories).filter((category): category is { id: string; name: string } => Boolean(category));
   return {
     slug: row.slug, title: row.title, location: row.city ?? "—", country: row.country ?? null,
-    owner: profile?.display_name ?? "HiFiSetup listener", ownerId: row.owner_id ?? null,
+    owner: profile?.display_name ?? "—", ownerId: row.owner_id ?? null,
     description: row.description ?? "Особистий простір для уважного слухання.",
     vibe: `${relations.length} компоненти`, palette: palettes[index % palettes.length],
     components: relations.map(({ component, isExtra }) => ({ id: component.id, brand: component.brand, model: component.model, category: component.category, origin: component.origin, imageUrl: component.image_url, isExtra })),
@@ -55,7 +55,7 @@ const mapSetup = (row: DatabaseSetup, index = 0): Setup => {
 
 const mapRpcSetup = (row: RpcSetup, index = 0): Setup => ({
   slug: row.slug, title: row.title, location: row.city ?? "—", country: row.country ?? null,
-  owner: row.owner_name ?? "HiFiSetup listener", ownerId: row.owner_id,
+  owner: row.owner_name ?? "—", ownerId: row.owner_id,
   description: row.description ?? "Особистий простір для уважного слухання.",
   vibe: `${row.components.length} компоненти`, palette: palettes[index % palettes.length],
   components: row.components.map((component) => ({ id: component.id, brand: component.brand, model: component.model, category: component.category, origin: component.origin, imageUrl: component.image_url, isExtra: component.is_extra ?? false })),

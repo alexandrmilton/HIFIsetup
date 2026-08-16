@@ -18,7 +18,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ sl
   if (!userId) return NextResponse.json({ error: "Увійдіть, щоб залишати вподобання." }, { status: 401 });
   if (!setupId) return NextResponse.json({ error: "Сетап не знайдено." }, { status: 404 });
 
-  await supabase.from("profiles").upsert({ id: userId }, { onConflict: "id", ignoreDuplicates: true });
   const { error } = await supabase.from("setup_likes").insert({ setup_id: setupId, user_id: userId });
   // A duplicate just means it was already liked — treat as success.
   if (error && error.code !== "23505") return NextResponse.json({ error: "Не вдалося зберегти вподобання." }, { status: 500 });

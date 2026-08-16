@@ -7,15 +7,17 @@ import { componentMeta } from "@/lib/component-meta";
 function ChainArrow() {
   return (
     <span className="schema-arrow" aria-hidden="true">
-      <svg viewBox="0 0 52 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 64 18" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
+          {/* Hex stops rather than var(): CSS custom properties are unreliable
+              inside SVG gradient stops across browsers. */}
           <linearGradient id="chainFade" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.12" />
-            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.95" />
+            <stop offset="0%" stopColor="#c4b5fd" />
+            <stop offset="100%" stopColor="#6d28d9" />
           </linearGradient>
         </defs>
-        <path d="M3 8 H41" stroke="url(#chainFade)" strokeWidth="1.6" strokeLinecap="round" />
-        <path d="M36.5 3.5 L42 8 L36.5 12.5" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M4 9 H46" stroke="url(#chainFade)" strokeWidth="2.6" strokeLinecap="round" />
+        <path d="M44 3.5 L51.5 9 L44 14.5" stroke="#6d28d9" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
       </svg>
     </span>
   );
