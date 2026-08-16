@@ -1,7 +1,7 @@
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
-export type CurrentProfile = { id: string; email: string | null; displayName: string | null; username: string | null; avatarPath: string | null; bio: string | null; isAdmin: boolean };
+export type CurrentProfile = { id: string; email: string | null; displayName: string | null; username: string | null; avatarPath: string | null; bio: string | null; isAdmin: boolean; isModerator: boolean };
 
 /** Slugs the signed-in user has liked, for rendering card like states. */
 export async function getLikedSlugs(): Promise<string[]> {
@@ -35,6 +35,6 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data: profile } = await supabase.from("profiles").select("display_name, username, avatar_path, bio, is_admin").eq("id", user.id).maybeSingle();
-  return { id: user.id, email: user.email ?? null, displayName: profile?.display_name ?? null, username: profile?.username ?? null, avatarPath: profile?.avatar_path ?? null, bio: profile?.bio ?? null, isAdmin: profile?.is_admin ?? false };
+  const { data: profile } = await supabase.from("profiles").select("display_name, username, avatar_path, bio, is_admin, is_moderator").eq("id", user.id).maybeSingle();
+  return { id: user.id, email: user.email ?? null, displayName: profile?.display_name ?? null, username: profile?.username ?? null, avatarPath: profile?.avatar_path ?? null, bio: profile?.bio ?? null, isAdmin: profile?.is_admin ?? false, isModerator: profile?.is_moderator ?? false };
 }

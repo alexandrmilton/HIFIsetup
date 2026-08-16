@@ -3,11 +3,20 @@
 import { useEffect, useState } from "react";
 import { OriginBadge } from "@/components/origin-badge";
 import type { AudioComponent, ComponentOrigin } from "@/lib/types";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 type SubStep = "search" | "details" | "added";
-const categories = ["Підсилювач", "Акустика", "Програвач", "Стример", "ЦАП", "Фонокоректор", "Навушники", "Підсилювач для навушників", "Кабелі", "Аксесуар"];
 
-export function ComponentPicker({ onAdd, onClose }: { onAdd: (component: AudioComponent) => void; onClose: () => void }) {
+const categories = [
+  "Підсилювач", "Попередній підсилювач", "Підсилювач потужності", "Акустика", "Студійні монітори",
+  "Бездротова акустика", "Сабвуфер", "Програвач", "Картридж", "Фонокоректор", "CD-програвач",
+  "Стример", "ЦАП", "Ресивер", "Навушники", "Внутрішньоканальні", "Підсилювач для навушників",
+  "Кабелі", "Стійка", "Підставка під акустику", "Віброізоляція", "Акустична обробка", "Живлення",
+  "Процесор / DSP", "Еквалайзер", "Медіа-сервер", "Котушковий магнітофон", "Касетна дека", "Тюнер",
+  "Догляд за вінілом", "Аксесуар",
+];
+
+export function ComponentPicker({ onAdd, onClose, t }: { onAdd: (component: AudioComponent) => void; onClose: () => void; t: Dictionary }) {
   const [subStep, setSubStep] = useState<SubStep>("search");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AudioComponent[]>([]);
@@ -44,44 +53,47 @@ export function ComponentPicker({ onAdd, onClose }: { onAdd: (component: AudioCo
   return (
     <div className="picker-card">
       <div className="picker-head">
-        <p className="eyebrow">Додати компонент</p>
-        <button type="button" className="text-link" onClick={onClose}>Закрити</button>
+        <p className="eyebrow">{t.picker.heading}</p>
+        <button type="button" className="text-link" onClick={onClose}>{t.picker.close}</button>
       </div>
       <div className="wizard-steps wizard-steps-mini">
-        <span className={subStep === "search" ? "wizard-step active" : "wizard-step done"}><b>1</b><em>Пошук</em></span>
+        <span className={subStep === "search" ? "wizard-step active" : "wizard-step done"}><b>1</b><em>{t.picker.step1}</em></span>
         <span className="wizard-step-line" />
-        <span className={subStep === "details" ? "wizard-step active" : subStep === "added" ? "wizard-step done" : "wizard-step"}><b>2</b><em>Деталі</em></span>
+        <span className={subStep === "details" ? "wizard-step active" : subStep === "added" ? "wizard-step done" : "wizard-step"}><b>2</b><em>{t.picker.step2}</em></span>
         <span className="wizard-step-line" />
-        <span className={subStep === "added" ? "wizard-step active" : "wizard-step"}><b>3</b><em>Додано</em></span>
+        <span className={subStep === "added" ? "wizard-step active" : "wizard-step"}><b>3</b><em>{t.picker.step3}</em></span>
       </div>
 
       {subStep === "search" && (
         <div className="component-search">
-          <div className="field"><label htmlFor="component-query">Почніть вводити назву компонента</label><input id="component-query" className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Напр. Marantz PM7000N" autoFocus /></div>
+          <div className="field"><label htmlFor="component-query">{t.picker.queryLabel}</label><input id="component-query" className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.picker.queryPlaceholder} autoFocus /></div>
           {query.trim() && (
             <div className="search-results-static">
-              {searching && <div className="search-empty">Шукаємо…</div>}
-              {!searching && results.map((item) => <button className="search-result" key={item.id} type="button" onClick={() => pickFromCatalog(item)}><span className="component-thumb" /><span><b>{item.brand} {item.model}</b><small>{item.category}</small></span><OriginBadge origin={item.origin} /></button>)}
-              {!searching && results.length === 0 && <div className="search-empty">У каталозі поки немає збігу.</div>}
-              <button type="button" className="text-link picker-manual-link" onClick={startManual}>Не знайшли? Додати вручну</button>
+              {searching && <div className="search-empty">{t.picker.searching}</div>}
+              {!searching && results.map((item) => <button className="search-result" key={item.id} type="button" onClick={() => pickFromCatalog(item)}><span className="component-thumb" /><span><b>{item.brand} {item.model}</b><small>{item.category}</small></span><OriginBadge origin={item.origin} t={t} /></button>)}
+              {!searching && results.length === 0 && <div className="search-empty">{t.picker.noMatch}</div>}
+              <button type="button" className="text-link picker-manual-link" onClick={startManual}>{t.picker.manual}</button>
             </div>
           )}
         </div>
       )}
 
       {subStep === "details" && (
-          <div className="picker-details">
-            <div className="two-fields"><div className="field"><label htmlFor="manual-brand">Бренд або майстер</label><input id="manual-brand" value={manual.brand} onChange={(event) => setManual({ ...manual, brand: event.target.value })} placeholder="Oleh Audio" /></div><div className="field"><label htmlFor="manual-model">Назва моделі</label><input id="manual-model" value={manual.model} onChange={(event) => setManual({ ...manual, model: event.target.value })} placeholder="Ламповий SE" /></div></div>
-            <div className="field"><label htmlFor="manual-category">Категорія</label><select id="manual-category" value={manual.category} onChange={(event) => setManual({ ...manual, category: event.target.value })}>{categories.map((category) => <option key={category}>{category}</option>)}</select></div>
-            <div className="field"><label>Походження</label><div className="type-options">{(["standard", "handmade", "custom_order"] as ComponentOrigin[]).map((type) => <button key={type} className={`type-option type-option-${type} ${manual.origin === type ? "active" : ""}`} type="button" onClick={() => setManual({ ...manual, origin: type })}>{type === "standard" ? "Standard" : type === "handmade" ? "Зроблено власноруч" : "Під замовлення"}</button>)}</div></div>
-            <button className="button button-dark button-small" type="button" onClick={confirm} disabled={!manual.brand.trim() || !manual.model.trim()}>Додати до сетапу</button>
+        <div className="picker-details">
+          <div className="two-fields">
+            <div className="field"><label htmlFor="manual-brand">{t.picker.brand}</label><input id="manual-brand" value={manual.brand} onChange={(event) => setManual({ ...manual, brand: event.target.value })} placeholder={t.picker.brandPlaceholder} /></div>
+            <div className="field"><label htmlFor="manual-model">{t.picker.model}</label><input id="manual-model" value={manual.model} onChange={(event) => setManual({ ...manual, model: event.target.value })} placeholder={t.picker.modelPlaceholder} /></div>
           </div>
+          <div className="field"><label htmlFor="manual-category">{t.picker.category}</label><select id="manual-category" value={manual.category} onChange={(event) => setManual({ ...manual, category: event.target.value })}>{categories.map((category) => <option key={category}>{category}</option>)}</select></div>
+          <div className="field"><label>{t.picker.origin}</label><div className="type-options">{(["standard", "handmade", "custom_order"] as ComponentOrigin[]).map((type) => <button key={type} className={`type-option type-option-${type} ${manual.origin === type ? "active" : ""}`} type="button" onClick={() => setManual({ ...manual, origin: type })}>{type === "standard" ? t.picker.standard : type === "handmade" ? t.picker.handmade : t.picker.custom}</button>)}</div></div>
+          <button className="button button-dark button-small" type="button" onClick={confirm} disabled={!manual.brand.trim() || !manual.model.trim()}>{t.picker.add}</button>
+        </div>
       )}
 
       {subStep === "added" && (
         <div className="picker-added">
-          <p className="form-success">{picked ? `${picked.brand} ${picked.model} — додано.` : "Компонент додано до сетапу."}</p>
-          <div className="picker-added-actions"><button className="button button-outline button-small" type="button" onClick={addAnother}>Додати ще</button><button className="button button-dark button-small" type="button" onClick={onClose}>Готово</button></div>
+          <p className="form-success">{picked ? t.picker.added(`${picked.brand} ${picked.model}`) : t.picker.addedGeneric}</p>
+          <div className="picker-added-actions"><button className="button button-outline button-small" type="button" onClick={addAnother}>{t.picker.addMore}</button><button className="button button-dark button-small" type="button" onClick={onClose}>{t.picker.done}</button></div>
         </div>
       )}
     </div>

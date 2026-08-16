@@ -46,8 +46,9 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const { data: setup } = await supabase.from("setups").select("id, owner_id").eq("slug", decode(slug)).maybeSingle();
   if (!setup) return NextResponse.json({ error: "Сетап не знайдено." }, { status: 404 });
 
+  // Deletion is owner-or-admin only: moderators can reject but never destroy.
   const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", userId).maybeSingle();
-  if (setup.owner_id !== userId && !profile?.is_admin) return NextResponse.json({ error: "Недостатньо прав." }, { status: 403 });
+  if (setup.owner_id !== userId && !profile?.is_admin) return NextResponse.json({ error: "Видаляти сетапи може лише власник або адміністратор." }, { status: 403 });
 
   const { error } = await supabase.from("setups").delete().eq("id", setup.id);
   if (error) return NextResponse.json({ error: "Не вдалося видалити сетап." }, { status: 500 });

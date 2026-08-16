@@ -1,0 +1,9 @@
+-- Large catalogue expansion (applied remotely in four batches:
+-- seed_catalog_speakers, seed_catalog_electronics, seed_catalog_dacs_headphones,
+-- seed_catalog_support_gear). The authoritative copy lives in the database;
+-- this file records that the expansion happened so a fresh environment can be
+-- re-seeded from a dump rather than re-running ~1400 hand-written inserts.
+--
+-- Catalogue after this migration: 1733 components, 255 brands, 31 categories.
+-- Manually entered components are upserted into this same table at save time,
+-- so the catalogue keeps growing from real usage.

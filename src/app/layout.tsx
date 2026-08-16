@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { getLocale } from "@/lib/i18n/server";
 
 // Manrope carries the geometric feel of the reference design; Playfair gives
 // the slogan its serif accent. Both ship Cyrillic, which Arial-only did not.
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   description: "Натхнення для вашого ідеального звуку. Досліджуйте реальні аудіо-сетапи, діліться своїм та знаходьте нові ідеї.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
-  return <html lang="uk" className={`${manrope.variable} ${playfair.variable}`}><body>{children}</body></html>;
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale();
+  return <html lang={locale} className={`${manrope.variable} ${playfair.variable}`}><body>{children}</body></html>;
 }

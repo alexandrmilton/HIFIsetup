@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 
 const allowed = new Set(["approved", "rejected", "pending"]);
 
-/** Admin-only: approve or reject a setup. The is_admin check is repeated in
- *  RLS, so a forged request still cannot write. */
+/** Admins and moderators approve or reject. Deletion stays admin-only and
+ *  lives in a separate route; RLS repeats both checks. */
 export async function POST(request: Request) {
   if (!hasSupabaseEnv()) return NextResponse.json({ error: "Supabase не налаштований." }, { status: 503 });
   const body = await request.json() as { slug?: string; status?: string; note?: string };
@@ -16,8 +16,8 @@ export async function POST(request: Request) {
   const userId = claimsData?.claims?.sub;
   if (!userId) return NextResponse.json({ error: "Увійдіть." }, { status: 401 });
 
-  const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", userId).maybeSingle();
-  if (!profile?.is_admin) return NextResponse.json({ error: "Недостатньо прав." }, { status: 403 });
+  const { data: profile } = await supabase.from("profiles").select("is_admin, is_moderator").eq("id", userId).maybeSingle();
+  if (!profile?.is_admin && !profile?.is_moderator) return NextResponse.json({ error: "Недостатньо прав." }, { status: 403 });
 
   const { error } = await supabase.from("setups")
     .update({ moderation_status: body.status, moderation_note: body.note?.trim() || null, reviewed_at: new Date().toISOString() })

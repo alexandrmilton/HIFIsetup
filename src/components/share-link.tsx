@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 
-export function ShareLink({ title, compact = false }: { title?: string; compact?: boolean }) {
+export function ShareLink({ title, t }: { title?: string; t: Dictionary }) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -13,7 +14,7 @@ export function ShareLink({ title, compact = false }: { title?: string; compact?
 
   function share(network: "telegram" | "facebook" | "x") {
     const url = encodeURIComponent(window.location.href);
-    const text = encodeURIComponent(title ?? "Подивіться на цей Hi-Fi сетап");
+    const text = encodeURIComponent(title ?? "HiFiSetup");
     const targets = {
       telegram: `https://t.me/share/url?url=${url}&text=${text}`,
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
@@ -22,14 +23,12 @@ export function ShareLink({ title, compact = false }: { title?: string; compact?
     window.open(targets[network], "_blank", "noopener,noreferrer,width=600,height=520");
   }
 
-  if (compact) return <button type="button" className="button button-outline button-small" onClick={copy}>{copied ? "Скопійовано ✓" : "Поділитися"}</button>;
-
   return (
     <div className="share-row">
-      <button type="button" className="button button-outline button-small" onClick={copy}>{copied ? "Скопійовано ✓" : "Копіювати посилання"}</button>
-      <button type="button" className="share-icon" onClick={() => share("telegram")} aria-label="Поділитися в Telegram">✈</button>
-      <button type="button" className="share-icon" onClick={() => share("facebook")} aria-label="Поділитися у Facebook">f</button>
-      <button type="button" className="share-icon" onClick={() => share("x")} aria-label="Поділитися в X">𝕏</button>
+      <button type="button" className="button button-outline button-small" onClick={copy}>{copied ? t.setup.copied : t.setup.copyLink}</button>
+      <button type="button" className="share-icon" onClick={() => share("telegram")} aria-label="Telegram">✈</button>
+      <button type="button" className="share-icon" onClick={() => share("facebook")} aria-label="Facebook">f</button>
+      <button type="button" className="share-icon" onClick={() => share("x")} aria-label="X">𝕏</button>
     </div>
   );
 }

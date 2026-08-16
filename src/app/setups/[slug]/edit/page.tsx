@@ -5,6 +5,7 @@ import { SetupWizard } from "@/components/setup-wizard";
 import { getCategories, getSetup, getSetupsByOwner } from "@/lib/setups";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { getCurrentProfile } from "@/lib/auth";
+import { getDictionary } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,20 +22,19 @@ export default async function EditSetupPage({ params }: PageProps<"/setups/[slug
 
   // get_setup_detail returns category names, not ids; read the ids from the
   // owner's own rows so the chips start out selected.
-  const owned = await getSetupsByOwner(profile.id);
+  const [owned, categories, t] = await Promise.all([getSetupsByOwner(profile.id), getCategories(), getDictionary()]);
   const withIds = owned.find((candidate) => candidate.slug === setup.slug);
-  const categories = await getCategories();
 
   return (
     <>
       <SiteHeader />
       <main className="page-main shell">
         <div className="page-head">
-          <p className="eyebrow">Редагування</p>
+          <p className="eyebrow">{t.wizard.editEyebrow}</p>
           <h1>{setup.title}</h1>
-          <p>Після збереження сетап знову пройде модерацію — це займає небагато часу.</p>
+          <p>{t.wizard.editLede}</p>
         </div>
-        <SetupWizard categories={categories} isSupabaseReady ownerId={profile.id} existing={{ ...setup, categoryIds: withIds?.categoryIds ?? [] }} />
+        <SetupWizard categories={categories} isSupabaseReady ownerId={profile.id} existing={{ ...setup, categoryIds: withIds?.categoryIds ?? [] }} t={t} />
       </main>
       <SiteFooter />
     </>

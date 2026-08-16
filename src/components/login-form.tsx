@@ -2,23 +2,26 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 type Mode = "signin" | "signup";
 
-export function LoginForm({ isSupabaseReady, next = "/" }: { isSupabaseReady: boolean; next?: string }) {
+export function LoginForm({ isSupabaseReady, next = "/", t }: { isSupabaseReady: boolean; next?: string; t: Dictionary }) {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const isSuccess = message === t.auth.checkMailConfirm || message === t.auth.checkMailReset;
+
   async function resetPassword() {
-    if (!isSupabaseReady || !email) { setMessage("Спершу введіть email вище."); return; }
+    if (!isSupabaseReady || !email) { setMessage(t.auth.enterEmail); return; }
     setLoading(true);
     setMessage(null);
     const supabase = createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback?next=/update-password` });
-    setMessage(error ? error.message : "Перевірте пошту — лист для відновлення пароля вже там.");
+    setMessage(error ? error.message : t.auth.checkMailReset);
     setLoading(false);
   }
 
@@ -32,8 +35,8 @@ export function LoginForm({ isSupabaseReady, next = "/" }: { isSupabaseReady: bo
     if (mode === "signup") {
       const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo } });
       if (error) setMessage(error.message);
-      else if (data.user && data.user.identities?.length === 0) setMessage("Акаунт із цим email вже існує. Увійдіть або натисніть «Забули пароль?».");
-      else setMessage("Перевірте пошту — лист із підтвердженням вже там.");
+      else if (data.user && data.user.identities?.length === 0) setMessage(t.auth.exists);
+      else setMessage(t.auth.checkMailConfirm);
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMessage(error.message);
@@ -45,24 +48,24 @@ export function LoginForm({ isSupabaseReady, next = "/" }: { isSupabaseReady: bo
   return (
     <>
       <div className="auth-tabs">
-        <button type="button" className={mode === "signin" ? "auth-tab active" : "auth-tab"} onClick={() => { setMode("signin"); setMessage(null); }}>Увійти</button>
-        <button type="button" className={mode === "signup" ? "auth-tab active" : "auth-tab"} onClick={() => { setMode("signup"); setMessage(null); }}>Реєстрація</button>
+        <button type="button" className={mode === "signin" ? "auth-tab active" : "auth-tab"} onClick={() => { setMode("signin"); setMessage(null); }}>{t.auth.signIn}</button>
+        <button type="button" className={mode === "signup" ? "auth-tab active" : "auth-tab"} onClick={() => { setMode("signup"); setMessage(null); }}>{t.auth.signUp}</button>
       </div>
       <form onSubmit={submit}>
         <div className="field">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">{t.auth.email}</label>
           <input id="email" type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} disabled={!isSupabaseReady || loading} />
         </div>
         <div className="field">
-          <label htmlFor="password">Пароль</label>
-          <input id="password" type="password" required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder="Мінімум 6 символів" value={password} onChange={(event) => setPassword(event.target.value)} disabled={!isSupabaseReady || loading} />
+          <label htmlFor="password">{t.auth.password}</label>
+          <input id="password" type="password" required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder={t.auth.passwordHint} value={password} onChange={(event) => setPassword(event.target.value)} disabled={!isSupabaseReady || loading} />
         </div>
-        {!isSupabaseReady && <p className="auth-note">Спершу додайте ключі Supabase у <code>.env.local</code>. Шаблон лежить у <code>.env.example</code>.</p>}
-        {message && <p className={message.startsWith("Перевірте") ? "form-success" : "form-error"}>{message}</p>}
+        {!isSupabaseReady && <p className="auth-note">{t.auth.envNote}</p>}
+        {message && <p className={isSuccess ? "form-success" : "form-error"}>{message}</p>}
         <button className="button button-dark" type="submit" disabled={!isSupabaseReady || loading}>
-          {loading ? "Зачекайте…" : mode === "signup" ? "Зареєструватися" : "Увійти"} <span>→</span>
+          {loading ? t.auth.wait : mode === "signup" ? t.auth.submitSignUp : t.auth.submitSignIn} <span>→</span>
         </button>
-        {mode === "signin" && <button type="button" className="text-link auth-forgot" onClick={resetPassword} disabled={!isSupabaseReady || loading}>Забули пароль?</button>}
+        {mode === "signin" && <button type="button" className="text-link auth-forgot" onClick={resetPassword} disabled={!isSupabaseReady || loading}>{t.auth.forgot}</button>}
       </form>
     </>
   );
