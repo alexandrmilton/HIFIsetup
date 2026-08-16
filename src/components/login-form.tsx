@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 
 type Mode = "signin" | "signup";
 
-export function LoginForm({ isSupabaseReady }: { isSupabaseReady: boolean }) {
+export function LoginForm({ isSupabaseReady, next = "/" }: { isSupabaseReady: boolean; next?: string }) {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +28,7 @@ export function LoginForm({ isSupabaseReady }: { isSupabaseReady: boolean }) {
     setLoading(true);
     setMessage(null);
     const supabase = createClient();
-    const emailRedirectTo = `${window.location.origin}/auth/callback`;
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
     if (mode === "signup") {
       const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo } });
       if (error) setMessage(error.message);
@@ -37,7 +37,7 @@ export function LoginForm({ isSupabaseReady }: { isSupabaseReady: boolean }) {
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMessage(error.message);
-      else window.location.href = "/";
+      else window.location.href = next;
     }
     setLoading(false);
   }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function UpdatePasswordForm({ isSupabaseReady }: { isSupabaseReady: boolean }) {
+export function UpdatePasswordForm({ isSupabaseReady, redirectTo = "/" }: { isSupabaseReady: boolean; redirectTo?: string | null }) {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,8 @@ export function UpdatePasswordForm({ isSupabaseReady }: { isSupabaseReady: boole
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password });
     if (error) setMessage(error.message);
-    else window.location.href = "/";
+    else if (redirectTo) window.location.href = redirectTo;
+    else { setMessage("Пароль оновлено."); setPassword(""); }
     setLoading(false);
   }
 
@@ -26,7 +27,7 @@ export function UpdatePasswordForm({ isSupabaseReady }: { isSupabaseReady: boole
         <label htmlFor="password">Новий пароль</label>
         <input id="password" type="password" required minLength={6} autoComplete="new-password" placeholder="Мінімум 6 символів" value={password} onChange={(event) => setPassword(event.target.value)} disabled={!isSupabaseReady || loading} />
       </div>
-      {message && <p className="form-error">{message}</p>}
+      {message && <p className={message === "Пароль оновлено." ? "form-success" : "form-error"}>{message}</p>}
       <button className="button button-dark" type="submit" disabled={!isSupabaseReady || loading}>
         {loading ? "Зачекайте…" : "Зберегти пароль"} <span>→</span>
       </button>
