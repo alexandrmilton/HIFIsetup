@@ -3,7 +3,7 @@ import Image from "next/image";
 import { getCurrentProfile } from "@/lib/auth";
 import { avatarUrl } from "@/lib/supabase/config";
 import { getDictionary, getLocale } from "@/lib/i18n/server";
-import { getTheme } from "@/lib/theme";
+import { getTheme } from "@/lib/theme-server";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 

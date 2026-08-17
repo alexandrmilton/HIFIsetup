@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { getLocale } from "@/lib/i18n/server";
-import { getTheme } from "@/lib/theme";
+import { getTheme } from "@/lib/theme-server";
 
 // Manrope carries the geometric feel of the reference design; Playfair gives
 // the slogan its serif accent. Both ship Cyrillic, which Arial-only did not.
