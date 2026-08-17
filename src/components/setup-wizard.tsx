@@ -19,8 +19,6 @@ const MAX_COVER_MB = 2;
 const MAX_COVER_BYTES = MAX_COVER_MB * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-const BUDGETS = ["до $500", "$500 – $1 500", "$1 500 – $5 000", "$5 000 – $15 000", "понад $15 000"];
-
 export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t, locale }: { categories: Category[]; isSupabaseReady: boolean; ownerId: string | null; existing?: Setup; t: Dictionary; locale: Locale }) {
   const isEdit = Boolean(existing);
   const [step, setStep] = useState<Step>(1);
@@ -260,7 +258,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
                   <div className="field"><label htmlFor="budget-range">{t.wizard.budget}</label>
                     <select id="budget-range" value={setup.budgetRange} onChange={(event) => setSetup({ ...setup, budgetRange: event.target.value })}>
                       <option value="">{t.wizard.budgetNone}</option>
-                      {BUDGETS.map((budget) => <option key={budget}>{budget}</option>)}
+                      {t.wizard.budgets.map((budget) => <option key={budget}>{budget}</option>)}
                     </select>
                   </div>
                 </div>

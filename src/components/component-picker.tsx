@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { OriginBadge } from "@/components/origin-badge";
 import type { AudioComponent, ComponentOrigin } from "@/lib/types";
 import { format, type Dictionary } from "@/lib/i18n/dictionaries";
-import { COMPONENT_CATEGORIES as categories, componentMeta } from "@/lib/component-meta";
+import { CATEGORY_GROUPS, COMPONENT_CATEGORIES as categories, componentMeta } from "@/lib/component-meta";
 
 type SubStep = "search" | "details" | "added";
 
@@ -64,7 +64,12 @@ export function ComponentPicker({ onAdd, onClose, t }: { onAdd: (component: Audi
           {query.trim() && (
             <div className="search-results-static">
               {searching && <div className="search-empty">{t.picker.searching}</div>}
-              {!searching && results.map((item) => <button className="search-result" key={item.id} type="button" onClick={() => pickFromCatalog(item)}><span className="component-icon" aria-hidden="true">{componentMeta(item.category).icon}</span><span><b>{item.brand} {item.model}</b><small>{item.category}</small></span><OriginBadge origin={item.origin} t={t} /></button>)}
+              {!searching && results.length > 0 && <p className="search-results-count">{format(t.picker.resultsCount, { count: results.length })}</p>}
+              {!searching && results.length > 0 && (
+                <div className="search-results-scroll">
+                  {results.map((item) => <button className="search-result" key={item.id} type="button" onClick={() => pickFromCatalog(item)}><span className="component-icon" aria-hidden="true">{componentMeta(item.category).icon}</span><span><b>{item.brand} {item.model}</b><small>{item.category}</small></span><OriginBadge origin={item.origin} t={t} /></button>)}
+                </div>
+              )}
               {!searching && results.length === 0 && <div className="search-empty">{t.picker.noMatch}</div>}
               <button type="button" className="text-link picker-manual-link" onClick={startManual}>{t.picker.manual}</button>
             </div>
@@ -78,7 +83,7 @@ export function ComponentPicker({ onAdd, onClose, t }: { onAdd: (component: Audi
             <div className="field"><label htmlFor="manual-brand">{t.picker.brand}</label><input id="manual-brand" value={manual.brand} onChange={(event) => setManual({ ...manual, brand: event.target.value })} placeholder={t.picker.brandPlaceholder} /></div>
             <div className="field"><label htmlFor="manual-model">{t.picker.model}</label><input id="manual-model" value={manual.model} onChange={(event) => setManual({ ...manual, model: event.target.value })} placeholder={t.picker.modelPlaceholder} /></div>
           </div>
-          <div className="field"><label htmlFor="manual-category">{t.picker.category}</label><select id="manual-category" value={manual.category} onChange={(event) => setManual({ ...manual, category: event.target.value })}>{categories.map((category) => <option key={category}>{category}</option>)}</select></div>
+          <div className="field"><label htmlFor="manual-category">{t.picker.category}</label><select id="manual-category" value={manual.category} onChange={(event) => setManual({ ...manual, category: event.target.value })}>{CATEGORY_GROUPS.map((group) => <optgroup key={group.label} label={group.label}>{group.categories.map((category) => <option key={category}>{category}</option>)}</optgroup>)}</select></div>
           <div className="field"><label>{t.picker.origin}</label><div className="type-options">{(["standard", "handmade", "custom_order"] as ComponentOrigin[]).map((type) => <button key={type} className={`type-option type-option-${type} ${manual.origin === type ? "active" : ""}`} type="button" onClick={() => setManual({ ...manual, origin: type })}>{type === "standard" ? t.picker.standard : type === "handmade" ? t.picker.handmade : t.picker.custom}</button>)}</div></div>
           <button className="button button-dark button-small" type="button" onClick={confirm} disabled={!manual.brand.trim() || !manual.model.trim()}>{t.picker.add}</button>
         </div>

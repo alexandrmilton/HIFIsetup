@@ -3,10 +3,12 @@ import Image from "next/image";
 import { getCurrentProfile } from "@/lib/auth";
 import { avatarUrl } from "@/lib/supabase/config";
 import { getDictionary, getLocale } from "@/lib/i18n/server";
+import { getTheme } from "@/lib/theme";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export async function SiteHeader() {
-  const [profile, t, locale] = await Promise.all([getCurrentProfile(), getDictionary(), getLocale()]);
+  const [profile, t, locale, theme] = await Promise.all([getCurrentProfile(), getDictionary(), getLocale(), getTheme()]);
   const initial = (profile?.displayName || profile?.email || "?").trim().charAt(0).toUpperCase();
   const avatar = avatarUrl(profile?.avatarPath);
   const isStaff = profile?.isAdmin || profile?.isModerator;
@@ -27,6 +29,7 @@ export async function SiteHeader() {
               cluster — which also keeps it visible on mobile, where nav-links
               is hidden and the public links move to the bottom bar. */}
           {isStaff && <Link className="nav-staff" href="/admin">{t.nav.moderation}</Link>}
+          <ThemeToggle theme={theme} t={t} />
           <LanguageSwitcher locale={locale} t={t} />
           {profile
             ? <Link className="profile-icon" href="/profile" aria-label={t.nav.profile}>{avatar ? <img src={avatar} alt="" /> : <span>{initial}</span>}</Link>
