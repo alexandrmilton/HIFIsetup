@@ -8,6 +8,7 @@ import type { AudioComponent, Category, Setup } from "@/lib/types";
 import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 import { COUNTRIES } from "@/lib/countries";
 import { componentMeta } from "@/lib/component-meta";
+import { translateComponentCategory, translateSetupCategory } from "@/lib/category-i18n";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
 type Step = 1 | 2 | 3;
@@ -175,7 +176,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
               </div>
             </div>
             <div className="field"><label htmlFor="setup-visibility">{t.wizard.visibility}</label><select id="setup-visibility" value={setup.isPublished ? "public" : "private"} onChange={(event) => setSetup({ ...setup, isPublished: event.target.value === "public" })}><option value="public">{t.wizard.visibilityPublic}</option><option value="private">{t.wizard.visibilityPrivate}</option></select></div>
-            <div className="field"><label>{t.wizard.category}</label><div className="type-options">{categories.map((category) => <button key={category.id} type="button" className={`type-option ${setup.categoryIds.includes(category.id) ? "active" : ""}`} onClick={() => toggleCategory(category.id)}>{category.name}</button>)}</div></div>
+            <div className="field"><label>{t.wizard.category}</label><div className="type-options">{categories.map((category) => <button key={category.id} type="button" className={`type-option ${setup.categoryIds.includes(category.id) ? "active" : ""}`} onClick={() => toggleCategory(category.id)}>{translateSetupCategory(category.name, locale)}</button>)}</div></div>
             {message && <p className={message.type === "error" ? "form-error" : "form-success"}>{message.text}</p>}
             <button className="button button-dark" type="button" onClick={goToComponents}>{t.wizard.next1} <span>→</span></button>
           </section>
@@ -186,14 +187,14 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
             <h2>{t.wizard.componentsStep}</h2>
             <p className="eyebrow">{t.wizard.mainChain}</p>
             {pickerTarget !== "chain" && <button className="button button-outline button-small" type="button" onClick={() => setPickerTarget("chain")}>{t.wizard.addComponent}</button>}
-            {pickerTarget === "chain" && <ComponentPicker onAdd={(component) => setSelected((items) => [...items, component])} onClose={() => setPickerTarget(null)} t={t} />}
+            {pickerTarget === "chain" && <ComponentPicker onAdd={(component) => setSelected((items) => [...items, component])} onClose={() => setPickerTarget(null)} t={t} locale={locale} />}
             {selected.length > 0 && (
               <div className="draft-components">
                 <p className="chain-hint">{t.wizard.chainHint}</p>
                 {selected.map((item, index) => (
                   <div className="draft-component chain-editable" key={`${item.id}-${index}`}>
                     <span className="component-icon" aria-hidden="true">{componentMeta(item.category).icon}</span>
-                    <div><b>{item.brand} {item.model}</b><small>{item.category}</small></div>
+                    <div><b>{item.brand} {item.model}</b><small>{translateComponentCategory(item.category, locale)}</small></div>
                     <OriginBadge origin={item.origin} t={t} />
                     <div className="chain-move">
                       <button type="button" className="chain-move-btn" aria-label={t.wizard.up} onClick={() => moveComponent(index, -1)} disabled={index === 0}>↑</button>
@@ -209,13 +210,13 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
               <p className="eyebrow">{t.wizard.extras}</p>
               <p className="chain-hint">{t.wizard.extrasHint}</p>
               {pickerTarget !== "extra" && <button className="button button-outline button-small" type="button" onClick={() => setPickerTarget("extra")}>{t.wizard.addExtra}</button>}
-              {pickerTarget === "extra" && <ComponentPicker onAdd={(component) => setExtras((items) => [...items, component])} onClose={() => setPickerTarget(null)} t={t} />}
+              {pickerTarget === "extra" && <ComponentPicker onAdd={(component) => setExtras((items) => [...items, component])} onClose={() => setPickerTarget(null)} t={t} locale={locale} />}
               {extras.length > 0 && (
                 <div className="draft-components">
                   {extras.map((item, index) => (
                     <div className="draft-component is-extra" key={`${item.id}-extra-${index}`}>
                       <span className="component-icon" aria-hidden="true">{componentMeta(item.category).icon}</span>
-                      <div><b>{item.brand} {item.model}</b><small>{item.category}</small></div>
+                      <div><b>{item.brand} {item.model}</b><small>{translateComponentCategory(item.category, locale)}</small></div>
                       <OriginBadge origin={item.origin} t={t} />
                       <button className="remove" type="button" aria-label={`${t.wizard.remove} ${item.model}`} onClick={() => setExtras((items) => items.filter((_, i) => i !== index))}>×</button>
                     </div>
@@ -300,7 +301,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
         {coverPreview ? <div className="preview-art preview-art-photo" style={{ backgroundImage: `url(${coverPreview})`, backgroundSize: "cover", backgroundPosition: "center" }} /> : <div className="preview-art" />}
         <h2>{setup.title || t.wizard.previewTitle}</h2>
         <p className="byline">{setup.location || t.wizard.previewCity} · {setup.isPublished ? t.wizard.previewPublic : t.wizard.previewPrivate}</p>
-        {setup.categoryIds.length > 0 && <div className="setup-tags">{categories.filter((category) => setup.categoryIds.includes(category.id)).map((category) => <span className="setup-tag" key={category.id}>{category.name}</span>)}</div>}
+        {setup.categoryIds.length > 0 && <div className="setup-tags">{categories.filter((category) => setup.categoryIds.includes(category.id)).map((category) => <span className="setup-tag" key={category.id}>{translateSetupCategory(category.name, locale)}</span>)}</div>}
         <div className="preview-stat"><span>{t.wizard.statComponents}</span><span>{selected.length}</span></div>
         <div className="preview-stat"><span>{t.wizard.statSpecial}</span><span>{selected.filter((item) => item.origin !== "standard").length}</span></div>
       </aside>

@@ -7,13 +7,13 @@ import { HomeBrowse } from "@/components/home-browse";
 import { StatsStrip } from "@/components/stats-strip";
 import { getPublishedSetups, getCategories, getSiteStats } from "@/lib/setups";
 import { getCurrentProfile, getLikedSlugs } from "@/lib/auth";
-import { getDictionary } from "@/lib/i18n/server";
+import { getDictionary, getLocale } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [setups, categories, stats, profile, likedSlugs, t] = await Promise.all([
-    getPublishedSetups(), getCategories(), getSiteStats(), getCurrentProfile(), getLikedSlugs(), getDictionary(),
+  const [setups, categories, stats, profile, likedSlugs, t, locale] = await Promise.all([
+    getPublishedSetups(), getCategories(), getSiteStats(), getCurrentProfile(), getLikedSlugs(), getDictionary(), getLocale(),
   ]);
 
   return (
@@ -35,7 +35,7 @@ export default async function Home() {
           </div>
         </section>
 
-        <HomeBrowse setups={setups} categories={categories} likedSlugs={likedSlugs} isSignedIn={Boolean(profile)} t={t} />
+        <HomeBrowse setups={setups} categories={categories} likedSlugs={likedSlugs} isSignedIn={Boolean(profile)} t={t} locale={locale} />
 
         <div className="shell"><StatsStrip stats={stats} t={t} /></div>
       </main>

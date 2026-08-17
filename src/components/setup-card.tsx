@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Setup } from "@/lib/types";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+import type { Dictionary, Locale } from "@/lib/i18n/dictionaries";
+import { translateSetupCategory } from "@/lib/category-i18n";
 
 /** Freshly touched setups get a badge for a week after their last edit. */
 const isFresh = (setup: Setup) => {
@@ -53,7 +54,7 @@ function SetupCover({ setup, top, t }: { setup: Setup; top?: number; t: Dictiona
   );
 }
 
-export function SetupCard({ setup, likedSlugs, isSignedIn, top, t }: { setup: Setup; likedSlugs: string[]; isSignedIn: boolean; top?: number; t: Dictionary }) {
+export function SetupCard({ setup, likedSlugs, isSignedIn, top, t, locale }: { setup: Setup; likedSlugs: string[]; isSignedIn: boolean; top?: number; t: Dictionary; locale: Locale }) {
   return (
     <div className={top !== undefined ? "setup-card is-top" : "setup-card"}>
       <Link className="setup-card-link" href={`/setups/${setup.slug}`}>
@@ -65,7 +66,7 @@ export function SetupCard({ setup, likedSlugs, isSignedIn, top, t }: { setup: Se
           <CardLike slug={setup.slug} count={setup.likeCount} liked={likedSlugs.includes(setup.slug)} isSignedIn={isSignedIn} t={t} />
         </div>
         <p className="setup-owner">{[setup.owner, setup.location, `${setup.components.length} ${t.card.components}`].filter(Boolean).join(" · ")}</p>
-        {setup.categories.length > 0 && <div className="setup-tags">{setup.categories.slice(0, 3).map((name) => <span className="setup-tag" key={name}>{name}</span>)}</div>}
+        {setup.categories.length > 0 && <div className="setup-tags">{setup.categories.slice(0, 3).map((name) => <span className="setup-tag" key={name}>{translateSetupCategory(name, locale)}</span>)}</div>}
       </div>
     </div>
   );

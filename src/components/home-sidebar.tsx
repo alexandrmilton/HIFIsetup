@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import type { Category, Setup } from "@/lib/types";
-import { format, type Dictionary } from "@/lib/i18n/dictionaries";
+import { format, type Dictionary, type Locale } from "@/lib/i18n/dictionaries";
+import { translateSetupCategory } from "@/lib/category-i18n";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 const relative = (iso: string | null, t: Dictionary) => {
@@ -14,7 +15,7 @@ const relative = (iso: string | null, t: Dictionary) => {
 };
 
 /** Desktop-only sidebar. Everything here links somewhere real — no mock UI. */
-export function HomeSidebar({ isSignedIn, categories, setups, t, activeCategory, onSelectCategory }: { isSignedIn: boolean; categories: Category[]; setups: Setup[]; t: Dictionary; activeCategory: string | null; onSelectCategory: (name: string | null) => void }) {
+export function HomeSidebar({ isSignedIn, categories, setups, t, locale, activeCategory, onSelectCategory }: { isSignedIn: boolean; categories: Category[]; setups: Setup[]; t: Dictionary; locale: Locale; activeCategory: string | null; onSelectCategory: (name: string | null) => void }) {
   const counts = new Map<string, number>();
   for (const setup of setups) for (const name of setup.categories) counts.set(name, (counts.get(name) ?? 0) + 1);
   const top = categories
@@ -63,7 +64,7 @@ export function HomeSidebar({ isSignedIn, categories, setups, t, activeCategory,
                   className={activeCategory === category.name ? "side-filter active" : "side-filter"}
                   onClick={() => onSelectCategory(activeCategory === category.name ? null : category.name)}
                 >
-                  {category.name}
+                  {translateSetupCategory(category.name, locale)}
                 </button>
                 <span>{category.count}</span>
               </li>

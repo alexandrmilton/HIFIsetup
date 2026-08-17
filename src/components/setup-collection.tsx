@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import { SetupCard } from "@/components/setup-card";
 import type { Category, Setup } from "@/lib/types";
-import { format, type Dictionary } from "@/lib/i18n/dictionaries";
+import { format, type Dictionary, type Locale } from "@/lib/i18n/dictionaries";
+import { translateSetupCategory } from "@/lib/category-i18n";
 
 const TOP_COUNT = 3;
 
-export function SetupCollection({ setups, categories, likedSlugs, isSignedIn, t, active, onActiveChange }: { setups: Setup[]; categories: Category[]; likedSlugs: string[]; isSignedIn: boolean; t: Dictionary; active: string | null; onActiveChange: (name: string | null) => void }) {
+export function SetupCollection({ setups, categories, likedSlugs, isSignedIn, t, locale, active, onActiveChange }: { setups: Setup[]; categories: Category[]; likedSlugs: string[]; isSignedIn: boolean; t: Dictionary; locale: Locale; active: string | null; onActiveChange: (name: string | null) => void }) {
   const [query, setQuery] = useState("");
   const setActive = onActiveChange;
 
@@ -57,7 +58,7 @@ export function SetupCollection({ setups, categories, likedSlugs, isSignedIn, t,
               aria-hidden={index >= categories.length}
               tabIndex={index >= categories.length ? -1 : 0}
             >
-              {category.name}
+              {translateSetupCategory(category.name, locale)}
             </button>
           ))}
         </div>
@@ -69,7 +70,7 @@ export function SetupCollection({ setups, categories, likedSlugs, isSignedIn, t,
             <div><p className="eyebrow">{t.collection.topEyebrow}</p><h2>{t.collection.topTitle}</h2></div>
           </div>
           <div className="setup-grid">
-            {top.map((setup, index) => <SetupCard key={setup.slug} setup={setup} likedSlugs={likedSlugs} isSignedIn={isSignedIn} top={index + 1} t={t} />)}
+            {top.map((setup, index) => <SetupCard key={setup.slug} setup={setup} likedSlugs={likedSlugs} isSignedIn={isSignedIn} top={index + 1} t={t} locale={locale} />)}
           </div>
         </section>
       )}
@@ -82,7 +83,7 @@ export function SetupCollection({ setups, categories, likedSlugs, isSignedIn, t,
           </div>
         </div>
         {rest.length > 0
-          ? <div className="setup-grid">{rest.map((setup) => <SetupCard key={setup.slug} setup={setup} likedSlugs={likedSlugs} isSignedIn={isSignedIn} t={t} />)}</div>
+          ? <div className="setup-grid">{rest.map((setup) => <SetupCard key={setup.slug} setup={setup} likedSlugs={likedSlugs} isSignedIn={isSignedIn} t={t} locale={locale} />)}</div>
           : <p className="empty-collection">{query.trim() ? format(t.collection.emptyQuery, { q: query.trim() }) : active ? t.collection.emptyCategory : t.collection.emptyAll}</p>}
       </section>
     </>

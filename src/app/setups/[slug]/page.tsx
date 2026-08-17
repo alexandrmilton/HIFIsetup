@@ -12,6 +12,7 @@ import { getSetup } from "@/lib/setups";
 import { getCurrentProfile, hasLikedSetup } from "@/lib/auth";
 import { getDictionary, getLocale } from "@/lib/i18n/server";
 import { componentMeta } from "@/lib/component-meta";
+import { translateComponentCategory, translateSetupCategory } from "@/lib/category-i18n";
 import { placeLabel } from "@/lib/countries";
 
 export async function generateMetadata({ params }: PageProps<"/setups/[slug]">): Promise<Metadata> {
@@ -63,7 +64,7 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
               {!setup.isPublished && <span className="private-flag">{t.setup.privateFlag}</span>}
               <h1>{setup.title}</h1>
               <p className="byline">{[setup.owner, placeLabel(setup.location, setup.country, locale), `${setup.components.length} ${t.setup.components}`].filter(Boolean).join(" · ")}</p>
-              {setup.categories.length > 0 && <div className="setup-tags">{setup.categories.map((name) => <span className="setup-tag" key={name}>{name}</span>)}</div>}
+              {setup.categories.length > 0 && <div className="setup-tags">{setup.categories.map((name) => <span className="setup-tag" key={name}>{translateSetupCategory(name, locale)}</span>)}</div>}
               {setup.description && <p className="detail-description">{setup.description}</p>}
               <div className="setup-actions">
                 <LikeButton slug={setup.slug} initialCount={setup.likeCount} initiallyLiked={liked} isSignedIn={Boolean(profile)} />
@@ -79,7 +80,7 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
             </section>
           )}
 
-          <SignalChain components={setup.components} t={t} />
+          <SignalChain components={setup.components} t={t} locale={locale} />
 
           <section className="setup-components">
             <p className="eyebrow">{t.setup.mainChain}</p>
@@ -90,7 +91,7 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
                   <li className="component-row" key={`${component.id}-${index}`}>
                     <span className={`component-icon tone-${meta.tone}`} aria-hidden="true">{meta.icon}</span>
                     <div className="component-row-body">
-                      <small>{component.category}</small>
+                      <small>{translateComponentCategory(component.category, locale)}</small>
                       <strong>{component.brand} {component.model}</strong>
                     </div>
                     <OriginBadge origin={component.origin} t={t} />
@@ -109,7 +110,7 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
                       <li className="component-row" key={`${component.id}-extra-${index}`}>
                         <span className={`component-icon tone-${meta.tone}`} aria-hidden="true">{meta.icon}</span>
                         <div className="component-row-body">
-                          <small>{component.category}</small>
+                          <small>{translateComponentCategory(component.category, locale)}</small>
                           <strong>{component.brand} {component.model}</strong>
                         </div>
                         <OriginBadge origin={component.origin} t={t} />

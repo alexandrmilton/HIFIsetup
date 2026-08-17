@@ -1,6 +1,7 @@
 import type { AudioComponent } from "@/lib/types";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+import type { Dictionary, Locale } from "@/lib/i18n/dictionaries";
 import { componentMeta } from "@/lib/component-meta";
+import { translateComponentCategory } from "@/lib/category-i18n";
 
 /** Three chevrons that brighten toward the next component. Drawn as plain
  *  paths with literal colours — a gradient referenced by url(#id) breaks when
@@ -25,7 +26,7 @@ function ChainArrow() {
   );
 }
 
-function ChainNode({ component, index }: { component: AudioComponent; index: number }) {
+function ChainNode({ component, index, locale }: { component: AudioComponent; index: number; locale: Locale }) {
   const meta = componentMeta(component.category);
   return (
     <div className={`schema-node tone-${meta.tone} schema-node-${component.origin}`}>
@@ -34,7 +35,7 @@ function ChainNode({ component, index }: { component: AudioComponent; index: num
       {/* Wrapped so the three lines always stack, whether the card itself is a
           column (desktop) or a compact row (mobile). */}
       <div className="schema-text">
-        <small>{component.category}</small>
+        <small>{translateComponentCategory(component.category, locale)}</small>
         <strong>{component.brand}</strong>
         <span className="schema-model">{component.model}</span>
       </div>
@@ -47,7 +48,7 @@ function ChainNode({ component, index }: { component: AudioComponent; index: num
 
 /** The chain keeps the order the member arranged in the wizard (position), and
  *  wraps into rows instead of running off one long line. */
-export function SignalChain({ components, t }: { components: AudioComponent[]; t: Dictionary }) {
+export function SignalChain({ components, t, locale }: { components: AudioComponent[]; t: Dictionary; locale: Locale }) {
   const chain = components.filter((component) => !component.isExtra);
   if (chain.length < 2) return null;
 
@@ -57,7 +58,7 @@ export function SignalChain({ components, t }: { components: AudioComponent[]; t
       <ol className="schema-flow">
         {chain.map((component, index) => (
           <li className="schema-item" key={`${component.id}-${index}`}>
-            <ChainNode component={component} index={index} />
+            <ChainNode component={component} index={index} locale={locale} />
             {index < chain.length - 1 && <ChainArrow />}
           </li>
         ))}
