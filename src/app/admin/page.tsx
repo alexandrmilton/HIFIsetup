@@ -3,15 +3,16 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ModerationQueue } from "@/components/moderation-queue";
 import { MemberRoles, type Member } from "@/components/member-roles";
+import { UserComponents, type UserComponent } from "@/components/user-components";
 import { getCurrentProfile } from "@/lib/auth";
 import { getSetupsForModeration } from "@/lib/setups";
 import { createClient } from "@/lib/supabase/server";
-import { getDictionary } from "@/lib/i18n/server";
+import { getDictionary, getLocale } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [profile, t] = await Promise.all([getCurrentProfile(), getDictionary()]);
+  const [profile, t, locale] = await Promise.all([getCurrentProfile(), getDictionary(), getLocale()]);
   // 404 rather than redirect: non-staff should not learn this page exists.
   if (!profile?.isAdmin && !profile?.isModerator) notFound();
 
@@ -20,10 +21,15 @@ export default async function AdminPage() {
   const reviewed = setups.filter((setup) => setup.moderationStatus !== "pending");
 
   let members: Member[] = [];
+  let userComponents: UserComponent[] = [];
   if (profile.isAdmin) {
     const supabase = await createClient();
-    const { data } = await supabase.rpc("list_members");
-    members = (data as Member[] | null) ?? [];
+    const [{ data: memberRows }, { data: componentRows }] = await Promise.all([
+      supabase.rpc("list_members"),
+      supabase.rpc("list_user_components"),
+    ]);
+    members = (memberRows as Member[] | null) ?? [];
+    userComponents = (componentRows as UserComponent[] | null) ?? [];
   }
 
   return (
@@ -47,11 +53,19 @@ export default async function AdminPage() {
         </section>
 
         {profile.isAdmin && (
-          <section className="admin-section">
-            <h2>{t.admin.members} ({members.length})</h2>
-            <p className="admin-hint">{t.admin.membersHint}</p>
-            <MemberRoles members={members} t={t} />
-          </section>
+          <>
+            <section className="admin-section">
+              <h2>{t.admin.userComponents} ({userComponents.length})</h2>
+              <p className="admin-hint">{t.admin.userComponentsHint}</p>
+              <UserComponents components={userComponents} t={t} locale={locale} />
+            </section>
+
+            <section className="admin-section">
+              <h2>{t.admin.members} ({members.length})</h2>
+              <p className="admin-hint">{t.admin.membersHint}</p>
+              <MemberRoles members={members} t={t} />
+            </section>
+          </>
         )}
       </main>
       <SiteFooter />
