@@ -31,9 +31,13 @@ function ChainNode({ component, index }: { component: AudioComponent; index: num
     <div className={`schema-node tone-${meta.tone} schema-node-${component.origin}`}>
       <span className="schema-step">{index + 1}</span>
       <span className="schema-glyph" aria-hidden="true">{meta.icon}</span>
-      <small>{component.category}</small>
-      <strong>{component.brand}</strong>
-      <span className="schema-model">{component.model}</span>
+      {/* Wrapped so the three lines always stack, whether the card itself is a
+          column (desktop) or a compact row (mobile). */}
+      <div className="schema-text">
+        <small>{component.category}</small>
+        <strong>{component.brand}</strong>
+        <span className="schema-model">{component.model}</span>
+      </div>
       {component.origin !== "standard" && (
         <span className={`schema-flag schema-flag-${component.origin}`}>{component.origin === "handmade" ? "Handmade" : "Custom"}</span>
       )}
