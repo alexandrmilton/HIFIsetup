@@ -38,12 +38,27 @@ function CardLike({ slug, count, liked, isSignedIn, t }: { slug: string; count: 
   );
 }
 
+/** Bottom-right stack flagging non-factory gear, so the feed shows at a glance
+ *  which setups carry handmade or custom-built components. */
+function OriginFlags({ setup, t }: { setup: Setup; t: Dictionary }) {
+  const origins = (["handmade", "custom_order"] as const).filter((origin) =>
+    setup.components.some((component) => component.origin === origin),
+  );
+  if (origins.length === 0) return null;
+  return (
+    <span className="cover-origins">
+      {origins.map((origin) => <span className={`cover-flag cover-flag-${origin}`} key={origin}>{t.origin[origin]}</span>)}
+    </span>
+  );
+}
+
 function SetupCover({ setup, top, t }: { setup: Setup; top?: number; t: Dictionary }) {
   const badges = (
     <>
       {top !== undefined && <span className="cover-badge cover-top">🔥 {t.card.top} {top}</span>}
       {isFresh(setup) && top === undefined && <span className="cover-badge cover-fresh">{t.card.fresh}</span>}
       {!setup.isPublished && <span className="cover-badge cover-private">{t.card.private}</span>}
+      <OriginFlags setup={setup} t={t} />
     </>
   );
   if (setup.coverUrl) return <div className="setup-cover" style={{ backgroundImage: `url(${setup.coverUrl})` }}>{badges}</div>;
