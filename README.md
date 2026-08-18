@@ -21,7 +21,20 @@ Migrations live in `supabase/migrations/` and have all been applied to the conne
 
 ### Moderation
 
-Every new or edited setup enters the queue as `moderation_status = 'pending'` and is invisible to everyone but its owner and admins. Admins (`profiles.is_admin`) approve or reject at `/admin`; only `approved` setups appear on the homepage, in the stats, and in the public API.
+Every new or edited setup enters the queue as `moderation_status = 'pending'` and is invisible to everyone but its owner and staff. Admins (`profiles.is_admin`) and moderators (`profiles.is_moderator`) approve or reject at `/admin`; only `approved` setups appear on the homepage, in the stats, and in the public API.
+
+That rule is enforced in RLS, not only in the application's queries — the anon key ships in the browser, so anything the policies allow is reachable directly through PostgREST regardless of what the app asks for.
+
+### Roles
+
+| | Moderator | Admin |
+| --- | --- | --- |
+| Approve / reject setups | ✅ | ✅ |
+| Delete setups | ❌ | ✅ |
+| Edit / delete member-added catalogue entries | ❌ | ✅ |
+| Grant or revoke the moderator role | ❌ | ✅ |
+
+Privileged columns (`profiles.is_admin`, `profiles.is_moderator`, `setups.moderation_status`) carry no `UPDATE` grant for `authenticated`. Every privileged change goes through a `SECURITY DEFINER` function that re-checks the caller's role, so a forged request cannot escalate. `anon` is read-only.
 
 ### Private setups
 
@@ -39,7 +52,7 @@ Read-only, CORS-enabled, no auth — intended for the planned Telegram bot. Fiel
 | `GET /api/public/setups/{slug}` | One setup with its ordered `chain[]`. Works for private setups given the slug. 404 if unknown. |
 | `GET /api/public/categories` | All category `{ name, slug }` pairs. |
 
-Only approved setups are served. Cover uploads are limited to JPG/PNG/WebP up to 4 MB, enforced both client-side and by the storage bucket.
+Only approved setups are served. Cover uploads are limited to JPG/PNG/WebP up to 2 MB, enforced both client-side and by the storage bucket.
 
 ```bash
 curl https://hifisetup.vercel.app/api/public/setups?category=Вініл&limit=5
