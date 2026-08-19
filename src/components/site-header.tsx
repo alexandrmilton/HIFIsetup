@@ -29,6 +29,7 @@ export async function SiteHeader() {
               cluster — which also keeps it visible on mobile, where nav-links
               is hidden and the public links move to the bottom bar. */}
           {isStaff && <Link className="nav-staff" href="/admin">{t.nav.moderation}</Link>}
+          {profile?.isAdmin && <Link className="nav-staff nav-staff-admin" href="/admin/stats">{t.nav.administration}</Link>}
           <ThemeToggle theme={theme} t={t} />
           <LanguageSwitcher locale={locale} t={t} />
           {profile
@@ -43,7 +44,9 @@ export async function SiteHeader() {
         <Link href="/#community"><b>◎</b>{t.nav.community}</Link>
         {/* Centre slot: the primary action, lifted just enough to read as one. */}
         <Link className="mobile-create" href={createHref}><b>＋</b>{t.nav.create}</Link>
-        <Link href="/about"><b>ⓘ</b>{t.nav.about}</Link>
+        {profile?.isAdmin
+          ? <Link href="/admin/stats"><b>◧</b>{t.nav.administration}</Link>
+          : <Link href="/about"><b>ⓘ</b>{t.nav.about}</Link>}
         <Link href={profile ? "/profile" : "/login"}>
           {avatar ? <img className="mobile-avatar" src={avatar} alt="" /> : <b>{profile ? initial : "◯"}</b>}
           {t.nav.profile}

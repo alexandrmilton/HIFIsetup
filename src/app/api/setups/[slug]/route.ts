@@ -56,14 +56,25 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const userId = claimsData?.claims?.sub;
   if (!userId) return NextResponse.json({ error: t.errors.signInToDelete }, { status: 401 });
 
-  const { data: setup } = await supabase.from("setups").select("id, owner_id").eq("slug", decode(slug)).maybeSingle();
+  const { data: setup } = await supabase.from("setups").select("id, owner_id, cover_path").eq("slug", decode(slug)).maybeSingle();
   if (!setup) return NextResponse.json({ error: t.errors.setupNotFound }, { status: 404 });
 
   // Deletion is owner-or-admin only: moderators can reject but never destroy.
   const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", userId).maybeSingle();
   if (setup.owner_id !== userId && !profile?.is_admin) return NextResponse.json({ error: t.errors.deleteForbidden }, { status: 403 });
 
+  // Collect the photos before the row goes: setup_images cascades away with it,
+  // and storage has no foreign key to clean itself up.
+  const { data: gallery } = await supabase.from("setup_images").select("path").eq("setup_id", setup.id);
+  const paths = [setup.cover_path, ...(gallery ?? []).map((image) => image.path)]
+    .filter((path): path is string => Boolean(path));
+
   const { error } = await supabase.from("setups").delete().eq("id", setup.id);
   if (error) return NextResponse.json({ error: t.errors.deleteFailed }, { status: 500 });
+
+  // Best effort: the setup is already gone, so a storage hiccup must not fail
+  // the request. Anything left behind is caught by the orphan purge in /admin.
+  if (paths.length) await supabase.storage.from("setup-images").remove(paths);
+
   return NextResponse.json({ deleted: true });
 }
