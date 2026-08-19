@@ -1,13 +1,19 @@
-/** Browser-side downscale + recompress, so a member can pick a 12 MB phone
- *  photo and we store something the bucket accepts instead of rejecting it.
- *  The storage bucket still enforces its own ceiling as the backstop. */
+/** Browser-side decode, downscale and re-encode, so a member can pick a 12 MB
+ *  iPhone HEIC and we store something the bucket accepts instead of rejecting
+ *  it. The storage bucket still enforces its own ceiling as the backstop. */
 
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 /** Long edge. Comfortably past the largest size any layout renders at 2x. */
 const MAX_EDGE = 2000;
 const QUALITY_STEPS = [0.82, 0.7, 0.58, 0.46, 0.35];
+/** The only types the storage bucket will take — anything else is re-encoded. */
+const BUCKET_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const IMAGE_EXTENSION = /\.(hei[cf]|avif|jpe?g|png|webp|gif|bmp|tiff?|jfif|dng)$/i;
 
-export const isImage = (file: File) => file.type.startsWith("image/");
+/** Windows reports an empty MIME type for .heic, so the extension has to count
+ *  too. Anything that slips through is caught by the decode step below. */
+export const isImage = (file: File) =>
+  file.type.startsWith("image/") || IMAGE_EXTENSION.test(file.name) || file.type === "";
 
 /** WebP is both smaller and allowed by the bucket; fall back where it is not
  *  encodable (older Safari). Detected once, lazily. */
@@ -24,14 +30,32 @@ function supportsWebp() {
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>
   new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
 
-/** Returns a file at or under MAX_UPLOAD_BYTES, or throws if the image cannot
- *  be decoded at all. Small images are still re-encoded only when they need to
- *  be — an already-tiny JPEG is returned untouched. */
-export async function compressImage(file: File): Promise<File> {
-  if (file.size <= MAX_UPLOAD_BYTES) return file;
+/** Safari decodes HEIC natively; everywhere else needs libheif, which is a
+ *  couple of megabytes of WASM — so it is only fetched once a file actually
+ *  fails to decode, keeping ordinary JPEG uploads free of it. */
+async function decode(file: File): Promise<ImageBitmap> {
+  try {
+    return await createImageBitmap(file);
+  } catch {
+    try {
+      // Plain entry point, not "heic-to/next" — that build targets web workers,
+      // and this runs on the main thread.
+      const { heicTo } = await import("heic-to");
+      return await heicTo({ blob: file, type: "bitmap" });
+    } catch {
+      throw new Error("decode-failed");
+    }
+  }
+}
 
-  const bitmap = await createImageBitmap(file).catch(() => null);
-  if (!bitmap) throw new Error("decode-failed");
+/** Returns a file the bucket will accept, or throws if the image cannot be
+ *  decoded at all. An already-small JPEG/PNG/WebP is passed through untouched;
+ *  every other format is re-encoded even when it is small, because the bucket
+ *  would refuse it otherwise. */
+export async function compressImage(file: File): Promise<File> {
+  if (file.size <= MAX_UPLOAD_BYTES && BUCKET_TYPES.has(file.type)) return file;
+
+  const bitmap = await decode(file);
 
   const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");

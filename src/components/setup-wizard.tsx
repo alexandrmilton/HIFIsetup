@@ -44,6 +44,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
     return [...cover, ...(existing?.gallery ?? [])];
   });
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [selected, setSelected] = useState<AudioComponent[]>((existing?.components ?? []).filter((c) => !c.isExtra));
   const [extras, setExtras] = useState<AudioComponent[]>((existing?.components ?? []).filter((c) => c.isExtra));
   const [pickerTarget, setPickerTarget] = useState<"chain" | "extra" | null>(null);
@@ -62,13 +63,12 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
     const chosen = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (!chosen.length || !isSupabaseReady || !ownerId) return;
-    if (chosen.some((file) => !isImage(file))) { setMessage({ type: "error", text: t.wizard.errFileType }); return; }
+    if (chosen.some((file) => !isImage(file))) { setPhotoError(t.wizard.errFileType); return; }
 
     const room = MAX_PHOTOS - photos.length;
-    if (room <= 0) { setMessage({ type: "error", text: format(t.wizard.errTooManyPhotos, { max: MAX_PHOTOS }) }); return; }
+    if (room <= 0) { setPhotoError(format(t.wizard.errTooManyPhotos, { max: MAX_PHOTOS })); return; }
     const batch = chosen.slice(0, room);
-    if (chosen.length > room) setMessage({ type: "error", text: format(t.wizard.errTooManyPhotos, { max: MAX_PHOTOS }) });
-    else setMessage(null);
+    setPhotoError(chosen.length > room ? format(t.wizard.errTooManyPhotos, { max: MAX_PHOTOS }) : null);
 
     setUploadingCover(true);
     const supabase = createClient();
@@ -77,13 +77,13 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
       try {
         ready = await compressImage(file);
       } catch {
-        setMessage({ type: "error", text: t.wizard.errCompress });
+        setPhotoError(t.wizard.errCompress);
         continue;
       }
       const extension = ready.type === "image/png" ? "png" : ready.type === "image/webp" ? "webp" : "jpg";
       const path = `covers/${ownerId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
       const { error } = await supabase.storage.from("setup-images").upload(path, ready, { upsert: true, contentType: ready.type });
-      if (error) { setMessage({ type: "error", text: error.message }); continue; }
+      if (error) { setPhotoError(error.message); continue; }
       const url = URL.createObjectURL(ready);
       setPhotos((current) => (current.length >= MAX_PHOTOS ? current : [...current, { path, url }]));
     }
@@ -96,7 +96,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
     const [promoted] = next.splice(index, 1);
     return [promoted, ...next];
   });
-  const removePhoto = (index: number) => setPhotos((current) => current.filter((_, i) => i !== index));
+  const removePhoto = (index: number) => { setPhotoError(null); setPhotos((current) => current.filter((_, i) => i !== index)); };
 
   // Only ask the browser when the member opts in; a denial simply leaves the
   // dropdown untouched rather than guessing.
@@ -170,7 +170,9 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
                 <span className="cover-dropzone-icon">📷</span><span>{t.wizard.dropzone}</span><small>{t.wizard.dropzoneHint}</small>
                 {uploadingCover && <small>{t.wizard.compressing}</small>}
               </button>
-            ) : (
+            ) : null}
+            {photos.length === 0 && photoError && <p className="form-error photo-error">{photoError}</p>}
+            {photos.length > 0 && (
               <div className="photo-manager">
                 <div className="photo-grid">
                   {photos.map((photo, index) => (
@@ -189,7 +191,8 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
                     </button>
                   )}
                 </div>
-                <p className="field-hint">{format(t.wizard.photoCount, { n: photos.length, max: MAX_PHOTOS })} · {t.wizard.photoHint}</p>
+                {photoError && <p className="form-error photo-error">{photoError}</p>}
+                <p className="field-hint photo-hint">{format(t.wizard.photoCount, { n: photos.length, max: MAX_PHOTOS })} · {t.wizard.photoHint}</p>
               </div>
             )}
             <input ref={coverInput} type="file" accept="image/*" multiple hidden onChange={uploadPhotos} />
