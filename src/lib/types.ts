@@ -22,6 +22,8 @@ export type Setup = {
   components: AudioComponent[];
   coverUrl: string | null;
   coverPath: string | null;
+  /** Extra photos beyond the cover, in display order. */
+  gallery: { url: string; path: string }[];
   categories: string[];
   categoryIds: string[];
   isPublished: boolean;

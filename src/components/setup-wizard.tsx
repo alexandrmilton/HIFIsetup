@@ -8,17 +8,19 @@ import type { AudioComponent, Category, Setup } from "@/lib/types";
 import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 import { COUNTRIES } from "@/lib/countries";
 import { componentMeta } from "@/lib/component-meta";
+import { compressImage, isImage } from "@/lib/image";
 import { translateComponentCategory, translateSetupCategory } from "@/lib/category-i18n";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
 type Step = 1 | 2 | 3;
 type DraftSetup = { title: string; location: string; description: string; isPublished: boolean; categoryIds: string[]; country: string; roomSize: string; hasAcousticTreatment: boolean | null; acousticNotes: string; listeningNotes: string; budgetRange: string };
 
-// Keep covers small enough to stay within the free storage tier while still
-// looking sharp on a retina card. The bucket enforces the same ceiling.
-const MAX_COVER_MB = 2;
-const MAX_COVER_BYTES = MAX_COVER_MB * 1024 * 1024;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+// Five photos: the first is the cover shown on cards, the rest form the
+// gallery on the setup page. Any input size is accepted — compressImage()
+// downscales in the browser to what the bucket will take.
+const MAX_PHOTOS = 5;
+
+type Photo = { path: string; url: string };
 
 export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t, locale }: { categories: Category[]; isSupabaseReady: boolean; ownerId: string | null; existing?: Setup; t: Dictionary; locale: Locale }) {
   const isEdit = Boolean(existing);
@@ -36,8 +38,11 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
     listeningNotes: existing?.room.listeningNotes ?? "",
     budgetRange: existing?.room.budgetRange ?? "",
   });
-  const [coverPath, setCoverPath] = useState<string | null>(existing?.coverPath ?? null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(existing?.coverUrl ?? null);
+  // Index 0 is always the cover; promoting a photo just moves it to the front.
+  const [photos, setPhotos] = useState<Photo[]>(() => {
+    const cover = existing?.coverPath && existing?.coverUrl ? [{ path: existing.coverPath, url: existing.coverUrl }] : [];
+    return [...cover, ...(existing?.gallery ?? [])];
+  });
   const [uploadingCover, setUploadingCover] = useState(false);
   const [selected, setSelected] = useState<AudioComponent[]>((existing?.components ?? []).filter((c) => !c.isExtra));
   const [extras, setExtras] = useState<AudioComponent[]>((existing?.components ?? []).filter((c) => c.isExtra));
@@ -53,23 +58,45 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
   const [savedSlug, setSavedSlug] = useState<string | null>(null);
   const coverInput = useRef<HTMLInputElement>(null);
 
-  async function uploadCover(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file || !isSupabaseReady || !ownerId) return;
-    if (!ALLOWED_TYPES.includes(file.type)) { setMessage({ type: "error", text: t.wizard.errFileType }); return; }
-    if (file.size > MAX_COVER_BYTES) { setMessage({ type: "error", text: format(t.wizard.errFileSize, { mb: (file.size / 1024 / 1024).toFixed(1), max: MAX_COVER_MB }) }); return; }
+  async function uploadPhotos(event: ChangeEvent<HTMLInputElement>) {
+    const chosen = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!chosen.length || !isSupabaseReady || !ownerId) return;
+    if (chosen.some((file) => !isImage(file))) { setMessage({ type: "error", text: t.wizard.errFileType }); return; }
+
+    const room = MAX_PHOTOS - photos.length;
+    if (room <= 0) { setMessage({ type: "error", text: format(t.wizard.errTooManyPhotos, { max: MAX_PHOTOS }) }); return; }
+    const batch = chosen.slice(0, room);
+    if (chosen.length > room) setMessage({ type: "error", text: format(t.wizard.errTooManyPhotos, { max: MAX_PHOTOS }) });
+    else setMessage(null);
 
     setUploadingCover(true);
-    setMessage(null);
     const supabase = createClient();
-    const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-    const path = `covers/${ownerId}-${Date.now()}.${extension}`;
-    const { error } = await supabase.storage.from("setup-images").upload(path, file, { upsert: true, contentType: file.type });
+    for (const file of batch) {
+      let ready: File;
+      try {
+        ready = await compressImage(file);
+      } catch {
+        setMessage({ type: "error", text: t.wizard.errCompress });
+        continue;
+      }
+      const extension = ready.type === "image/png" ? "png" : ready.type === "image/webp" ? "webp" : "jpg";
+      const path = `covers/${ownerId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+      const { error } = await supabase.storage.from("setup-images").upload(path, ready, { upsert: true, contentType: ready.type });
+      if (error) { setMessage({ type: "error", text: error.message }); continue; }
+      const url = URL.createObjectURL(ready);
+      setPhotos((current) => (current.length >= MAX_PHOTOS ? current : [...current, { path, url }]));
+    }
     setUploadingCover(false);
-    if (error) { setMessage({ type: "error", text: error.message }); return; }
-    setCoverPath(path);
-    setCoverPreview(URL.createObjectURL(file));
   }
+
+  const makeCover = (index: number) => setPhotos((current) => {
+    if (index <= 0 || index >= current.length) return current;
+    const next = [...current];
+    const [promoted] = next.splice(index, 1);
+    return [promoted, ...next];
+  });
+  const removePhoto = (index: number) => setPhotos((current) => current.filter((_, i) => i !== index));
 
   // Only ask the browser when the member opts in; a denial simply leaves the
   // dropdown untouched rather than guessing.
@@ -115,7 +142,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
     const response = await fetch(isEdit ? `/api/setups/${existing!.slug}` : "/api/setups", {
       method: isEdit ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...setup, coverPath, components: selected, extras }),
+      body: JSON.stringify({ ...setup, coverPath: photos[0]?.path ?? null, galleryPaths: photos.slice(1).map((photo) => photo.path), components: selected, extras }),
     });
     const payload = await response.json();
     setSaving(false);
@@ -138,11 +165,34 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
         {step === 1 && (
           <section className="form-section">
             <h2>{t.wizard.aboutSetup}</h2>
-            <button type="button" className="cover-dropzone" onClick={() => coverInput.current?.click()} disabled={!isSupabaseReady}>
-              {coverPreview ? <img src={coverPreview} alt="" /> : <><span className="cover-dropzone-icon">📷</span><span>{t.wizard.dropzone}</span><small>{t.wizard.dropzoneHint}</small></>}
-              {uploadingCover && <small>{t.profile.uploading}</small>}
-            </button>
-            <input ref={coverInput} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={uploadCover} />
+            {photos.length === 0 ? (
+              <button type="button" className="cover-dropzone" onClick={() => coverInput.current?.click()} disabled={!isSupabaseReady || uploadingCover}>
+                <span className="cover-dropzone-icon">📷</span><span>{t.wizard.dropzone}</span><small>{t.wizard.dropzoneHint}</small>
+                {uploadingCover && <small>{t.wizard.compressing}</small>}
+              </button>
+            ) : (
+              <div className="photo-manager">
+                <div className="photo-grid">
+                  {photos.map((photo, index) => (
+                    <div className={index === 0 ? "photo-tile is-cover" : "photo-tile"} key={photo.path}>
+                      <img src={photo.url} alt="" />
+                      {index === 0
+                        ? <span className="photo-flag">{t.wizard.coverBadge}</span>
+                        : <button type="button" className="photo-promote" onClick={() => makeCover(index)}>{t.wizard.makeCover}</button>}
+                      <button type="button" className="photo-remove" aria-label={t.wizard.removePhoto} onClick={() => removePhoto(index)}>×</button>
+                    </div>
+                  ))}
+                  {photos.length < MAX_PHOTOS && (
+                    <button type="button" className="photo-add" onClick={() => coverInput.current?.click()} disabled={uploadingCover}>
+                      <span>{uploadingCover ? "…" : "＋"}</span>
+                      <small>{uploadingCover ? t.wizard.compressing : t.wizard.addPhotos}</small>
+                    </button>
+                  )}
+                </div>
+                <p className="field-hint">{format(t.wizard.photoCount, { n: photos.length, max: MAX_PHOTOS })} · {t.wizard.photoHint}</p>
+              </div>
+            )}
+            <input ref={coverInput} type="file" accept="image/*" multiple hidden onChange={uploadPhotos} />
             <div className="field"><label htmlFor="setup-title">{t.wizard.title}</label><input id="setup-title" required placeholder={t.wizard.titlePlaceholder} value={setup.title} onChange={(event) => setSetup({ ...setup, title: event.target.value })} /></div>
             <div className="field"><label htmlFor="setup-description">{t.wizard.description}</label><textarea id="setup-description" placeholder={t.wizard.descriptionPlaceholder} value={setup.description} onChange={(event) => setSetup({ ...setup, description: event.target.value })} /></div>
             <div className="two-fields">
@@ -284,7 +334,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
                   <div className="summary-row"><span>{t.wizard.summaryTitle}</span><strong>{setup.title || "—"}</strong></div>
                   <div className="summary-row"><span>{t.wizard.summaryComponents}</span><strong>{selected.length}</strong></div>
                   <div className="summary-row"><span>{t.wizard.summaryCategories}</span><strong>{setup.categoryIds.length || "—"}</strong></div>
-                  <div className="summary-row"><span>{t.wizard.summaryCover}</span><strong>{coverPath ? t.wizard.summaryCoverYes : t.wizard.summaryCoverNo}</strong></div>
+                  <div className="summary-row"><span>{t.wizard.summaryCover}</span><strong>{photos.length ? format(t.wizard.photoCount, { n: photos.length, max: MAX_PHOTOS }) : t.wizard.summaryCoverNo}</strong></div>
                   <div className="summary-row"><span>{t.wizard.summaryVisibility}</span><strong>{setup.isPublished ? t.profile.public : t.profile.private}</strong></div>
                 </div>
 
@@ -298,7 +348,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
 
       <aside className="preview-card">
         <h3>{t.wizard.preview}</h3>
-        {coverPreview ? <div className="preview-art preview-art-photo" style={{ backgroundImage: `url(${coverPreview})`, backgroundSize: "cover", backgroundPosition: "center" }} /> : <div className="preview-art" />}
+        {photos[0] ? <div className="preview-art preview-art-photo" style={{ backgroundImage: `url(${photos[0].url})`, backgroundSize: "cover", backgroundPosition: "center" }} /> : <div className="preview-art" />}
         <h2>{setup.title || t.wizard.previewTitle}</h2>
         <p className="byline">{setup.location || t.wizard.previewCity} · {setup.isPublished ? t.wizard.previewPublic : t.wizard.previewPrivate}</p>
         {setup.categoryIds.length > 0 && <div className="setup-tags">{categories.filter((category) => setup.categoryIds.includes(category.id)).map((category) => <span className="setup-tag" key={category.id}>{translateSetupCategory(category.name, locale)}</span>)}</div>}

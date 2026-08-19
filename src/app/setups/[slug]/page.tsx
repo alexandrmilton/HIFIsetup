@@ -5,6 +5,7 @@ import { OriginBadge } from "@/components/origin-badge";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { SignalChain } from "@/components/signal-chain";
+import { SetupGallery } from "@/components/setup-gallery";
 import { ShareLink } from "@/components/share-link";
 import { LikeButton } from "@/components/like-button";
 import { Comments } from "@/components/comments";
@@ -73,6 +74,8 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
               </div>
             </div>
           </div>
+
+          <SetupGallery images={[setup.coverUrl, ...setup.gallery.map((image) => image.url)].filter((url): url is string => Boolean(url))} title={setup.title} t={t} />
 
           {roomFacts.length > 0 && (
             <section className="room-facts">

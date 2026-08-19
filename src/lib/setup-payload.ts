@@ -4,12 +4,14 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 export type SetupPayload = {
   title?: string; location?: string; country?: string; description?: string; isPublished?: boolean;
-  coverPath?: string | null; categoryIds?: string[]; components?: AudioComponent[]; extras?: AudioComponent[];
+  coverPath?: string | null; galleryPaths?: string[]; categoryIds?: string[]; components?: AudioComponent[]; extras?: AudioComponent[];
   roomSize?: string; hasAcousticTreatment?: boolean | null; acousticNotes?: string;
   listeningNotes?: string; budgetRange?: string;
 };
 
 const validOrigins = new Set<ComponentOrigin>(["standard", "handmade", "custom_order"]);
+/** Five photos per setup in total: the cover plus four extras. */
+export const MAX_GALLERY_IMAGES = 4;
 
 export const setupColumns = (body: SetupPayload) => ({
   title: body.title!.trim(),
@@ -78,6 +80,19 @@ export async function syncRelations(supabase: SupabaseClient, setupId: string, u
   await supabase.from("setup_categories").delete().eq("setup_id", setupId);
   if (body.categoryIds?.length) {
     await supabase.from("setup_categories").insert(body.categoryIds.map((categoryId) => ({ setup_id: setupId, category_id: categoryId })));
+  }
+
+  // Extra photos are replaced wholesale, same as the component chain. The
+  // cover itself lives on setups.cover_path and is never duplicated here.
+  await supabase.from("setup_images").delete().eq("setup_id", setupId);
+  const gallery = (body.galleryPaths ?? [])
+    .map((path) => path?.trim())
+    .filter((path): path is string => Boolean(path) && path !== body.coverPath)
+    .slice(0, MAX_GALLERY_IMAGES);
+  if (gallery.length) {
+    const { error: imageError } = await supabase.from("setup_images")
+      .insert(gallery.map((path, position) => ({ setup_id: setupId, path, position })));
+    if (imageError) return t.errors.imagesSaveFailed;
   }
   return null;
 }

@@ -52,7 +52,7 @@ Read-only, CORS-enabled, no auth — intended for the planned Telegram bot. Fiel
 | `GET /api/public/setups/{slug}` | One setup with its ordered `chain[]`. Works for private setups given the slug. 404 if unknown. |
 | `GET /api/public/categories` | All category `{ name, slug }` pairs. |
 
-Only approved setups are served. Cover uploads are limited to JPG/PNG/WebP up to 2 MB, enforced both client-side and by the storage bucket.
+Only approved setups are served. A setup carries up to five photos: the cover plus a gallery. Any file size is accepted — the browser downscales and re-encodes to WebP before upload, and the storage bucket enforces its own 2 MB ceiling as the backstop.
 
 ```bash
 curl https://hifisetup.vercel.app/api/public/setups?category=Вініл&limit=5
