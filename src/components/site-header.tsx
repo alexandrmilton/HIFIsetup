@@ -28,8 +28,18 @@ export async function SiteHeader() {
           {/* Staff tool rather than a public page, so it sits in the actions
               cluster — which also keeps it visible on mobile, where nav-links
               is hidden and the public links move to the bottom bar. */}
-          {isStaff && <Link className="nav-staff" href="/admin">{t.nav.moderation}</Link>}
-          {profile?.isAdmin && <Link className="nav-staff nav-staff-admin" href="/admin/stats">{t.nav.administration}</Link>}
+          {isStaff && (
+            <Link className="nav-staff" href="/admin" aria-label={t.nav.moderation} title={t.nav.moderation}>
+              <span className="nav-staff-full">{t.nav.moderation}</span>
+              <span className="nav-staff-short" aria-hidden="true">{t.nav.moderationShort}</span>
+            </Link>
+          )}
+          {profile?.isAdmin && (
+            <Link className="nav-staff nav-staff-admin" href="/admin/stats" aria-label={t.nav.administration} title={t.nav.administration}>
+              <span className="nav-staff-full">{t.nav.administration}</span>
+              <span className="nav-staff-short" aria-hidden="true">{t.nav.administrationShort}</span>
+            </Link>
+          )}
           <ThemeToggle theme={theme} t={t} />
           <LanguageSwitcher locale={locale} t={t} />
           {profile

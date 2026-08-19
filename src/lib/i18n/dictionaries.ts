@@ -7,7 +7,7 @@ export const DEFAULT_LOCALE: Locale = "uk";
 export const LOCALE_COOKIE = "hifisetup_locale";
 
 const uk = {
-  nav: { setups: "Сетапи", create: "Створити", about: "Про нас", community: "Спільнота", moderation: "Модерація", administration: "Адміністрування", signIn: "Увійти", add: "Додати", home: "Головна", profile: "Профіль" },
+  nav: { setups: "Сетапи", create: "Створити", about: "Про нас", community: "Спільнота", moderation: "Модерація", administration: "Адміністрування", moderationShort: "М", administrationShort: "А", signIn: "Увійти", add: "Додати", home: "Головна", profile: "Профіль" },
   hero: {
     eyebrow: "Аудіо-сетапи, зібрані з любов’ю",
     titleLead: "Місце, де ваша музика", titleAccent: "має вигляд",
@@ -208,7 +208,10 @@ const uk = {
     purgeable: "Можна прибрати зараз", purgeableHint: "Файли, молодші за добу, не чіпаємо — вони можуть належати комусь, хто саме заповнює форму.",
     purge: "Прибрати файли", purging: "Прибираємо…",
     purged: "Прибрано {n} файлів, звільнено {size}.", purgeNone: "Зайвих файлів немає.",
-    dbSize: "Розмір бази", setups: "Сетапи", components: "Компоненти",
+    dbSize: "Розмір бази", dbApp: "З них дані сайту",
+    dbHint: "Стільки ж показує Supabase — це весь інстанс разом зі службовими схемами. Дані сайту займають малу частку.",
+    lag: "Supabase оновлює свою статистику з затримкою, тому одразу після очищення числа там можуть відрізнятись.",
+    setups: "Сетапи", components: "Компоненти",
     members: "Учасники", comments: "Коментарі", likes: "Вподобання",
     pending: "На модерації", approved: "Схвалено", rejected: "Відхилено", privateSetups: "Приватні",
     admins: "Адміністратори", moderators: "Модератори",
@@ -252,7 +255,7 @@ const uk = {
 };
 
 const en: typeof uk = {
-  nav: { setups: "Setups", create: "Create", about: "About", community: "Community", moderation: "Moderation", administration: "Administration", signIn: "Sign in", add: "Add", home: "Home", profile: "Profile" },
+  nav: { setups: "Setups", create: "Create", about: "About", community: "Community", moderation: "Moderation", administration: "Administration", moderationShort: "M", administrationShort: "A", signIn: "Sign in", add: "Add", home: "Home", profile: "Profile" },
   hero: {
     eyebrow: "Audio setups, built with love",
     titleLead: "Where your music", titleAccent: "looks the part",
@@ -453,7 +456,10 @@ const en: typeof uk = {
     purgeable: "Safe to purge now", purgeableHint: "Files younger than a day are left alone — they may belong to someone still filling in the form.",
     purge: "Purge files", purging: "Purging…",
     purged: "Removed {n} files, freed {size}.", purgeNone: "Nothing to purge.",
-    dbSize: "Database size", setups: "Setups", components: "Components",
+    dbSize: "Database size", dbApp: "Of that, site data",
+    dbHint: "The same figure Supabase reports — the whole instance including its system schemas. The site's own data is a small share.",
+    lag: "Supabase refreshes its usage figures on a delay, so right after a purge the numbers there may differ.",
+    setups: "Setups", components: "Components",
     members: "Members", comments: "Comments", likes: "Likes",
     pending: "Pending", approved: "Approved", rejected: "Rejected", privateSetups: "Private",
     admins: "Admins", moderators: "Moderators",

@@ -17,7 +17,7 @@ const DATABASE_LIMIT = 500 * 1024 * 1024;
 type Stats = {
   storage: { files: number; bytes: number; covers: number; gallery: number; avatars: number;
              orphanFiles: number; orphanBytes: number; purgeableFiles: number; purgeableBytes: number; largestBytes: number };
-  database: { bytes: number; setups: number; components: number; members: number; comments: number; likes: number };
+  database: { bytes: number; appBytes: number; setups: number; components: number; members: number; comments: number; likes: number };
   content: { pending: number; approved: number; rejected: number; private: number; admins: number; moderators: number;
              memberAdded: number; seeded: number; unusedComponents: number;
              setupsThisWeek: number; membersThisWeek: number; withoutCover: number };
@@ -63,6 +63,7 @@ export default async function AdminStatsPage() {
 
         <section className="admin-section">
           <h2>{t.adminStats.storage}</h2>
+          <p className="admin-hint">{t.adminStats.lag}</p>
           <div className="stat-cards">
             <div className="stat-card">
               <Meter label={format(t.adminStats.ofLimit, { limit: formatBytes(STORAGE_LIMIT) })} used={storage.bytes} limit={STORAGE_LIMIT} />
@@ -88,7 +89,8 @@ export default async function AdminStatsPage() {
           <div className="stat-cards">
             <div className="stat-card">
               <Meter label={format(t.adminStats.ofLimit, { limit: formatBytes(DATABASE_LIMIT) })} used={database.bytes} limit={DATABASE_LIMIT} />
-              <Row label={t.adminStats.dbSize} value={formatBytes(database.bytes)} />
+              <Row label={t.adminStats.dbSize} value={formatBytes(database.bytes)} hint={t.adminStats.dbHint} />
+              <Row label={t.adminStats.dbApp} value={formatBytes(database.appBytes)} />
             </div>
             <div className="stat-card">
               <Row label={t.adminStats.setups} value={database.setups} />
