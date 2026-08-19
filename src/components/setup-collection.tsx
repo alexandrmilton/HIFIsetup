@@ -53,7 +53,9 @@ export function SetupCollection({ setups, categories, likedSlugs, isSignedIn, t,
           {track.map((category, index) => (
             <button
               key={`${category.id}-${index}`}
-              className={active === category.name ? "tag-pill active" : "tag-pill"}
+              // The second copy exists only to make the loop seamless; it is
+              // hidden outright when the animation is off.
+              className={`tag-pill${active === category.name ? " active" : ""}${index >= categories.length ? " is-clone" : ""}`}
               onClick={() => setActive(active === category.name ? null : category.name)}
               aria-hidden={index >= categories.length}
               tabIndex={index >= categories.length ? -1 : 0}
