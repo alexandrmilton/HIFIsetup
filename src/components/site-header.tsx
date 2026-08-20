@@ -50,16 +50,21 @@ export async function SiteHeader() {
       </header>
 
       <nav className="mobile-nav" aria-label={t.nav.home}>
-        <Link href="/"><b>⌂</b>{t.nav.setups}</Link>
-        <Link href="/#community"><b>◎</b>{t.nav.community}</Link>
-        {/* Centre slot: the primary action, lifted just enough to read as one. */}
-        <Link className="mobile-create" href={createHref}><b>＋</b>{t.nav.create}</Link>
+        <Link href="/"><b>⌂</b><span>{t.nav.setups}</span></Link>
+        {/* An admin reaches the community block by scrolling the home page, but
+            has no other route to the two staff pages on a phone — so the bar
+            gives both of its side slots to them. */}
         {profile?.isAdmin
-          ? <Link href="/admin/stats"><b>◧</b>{t.nav.administration}</Link>
-          : <Link href="/about"><b>ⓘ</b>{t.nav.about}</Link>}
+          ? <Link href="/admin/stats"><b>◧</b><span>{t.nav.administration}</span></Link>
+          : <Link href="/#community"><b>◎</b><span>{t.nav.community}</span></Link>}
+        {/* Centre slot: the primary action, lifted just enough to read as one. */}
+        <Link className="mobile-create" href={createHref}><b>＋</b><span>{t.nav.create}</span></Link>
+        {profile?.isAdmin
+          ? <Link href="/admin"><b>◇</b><span>{t.nav.moderation}</span></Link>
+          : <Link href="/about"><b>ⓘ</b><span>{t.nav.about}</span></Link>}
         <Link href={profile ? "/profile" : "/login"}>
           {avatar ? <img className="mobile-avatar" src={avatar} alt="" /> : <b>{profile ? initial : "◯"}</b>}
-          {t.nav.profile}
+          <span>{t.nav.profile}</span>
         </Link>
       </nav>
     </>
