@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { StoragePurge } from "@/components/storage-purge";
+import { ThumbnailBackfill } from "@/components/thumbnail-backfill";
 import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getDictionary } from "@/lib/i18n/server";
@@ -16,7 +17,8 @@ const DATABASE_LIMIT = 500 * 1024 * 1024;
 
 type Stats = {
   storage: { files: number; bytes: number; covers: number; gallery: number; avatars: number;
-             orphanFiles: number; orphanBytes: number; purgeableFiles: number; purgeableBytes: number; largestBytes: number };
+             orphanFiles: number; orphanBytes: number; purgeableFiles: number; purgeableBytes: number;
+             legacyFiles?: number; legacyBytes?: number; largestBytes: number };
   database: { bytes: number; appBytes: number; setups: number; components: number; members: number; comments: number; likes: number };
   content: { pending: number; approved: number; rejected: number; private: number; admins: number; moderators: number;
              memberAdded: number; seeded: number; unusedComponents: number;
@@ -50,6 +52,9 @@ export default async function AdminStatsPage() {
   if (error || !data) notFound();
   const stats = data as Stats;
   const { storage, database, content } = stats;
+  // Absent until the backfill migration lands, so the card degrades to zero
+  // rather than rendering "undefined · NaN" on a deploy that arrives first.
+  const legacyFiles = storage.legacyFiles ?? 0;
 
   return (
     <>
@@ -80,6 +85,10 @@ export default async function AdminStatsPage() {
               <Row label={t.adminStats.orphans} value={`${storage.orphanFiles} · ${formatBytes(storage.orphanBytes)}`} hint={t.adminStats.orphansHint} />
               <Row label={t.adminStats.purgeable} value={`${storage.purgeableFiles} · ${formatBytes(storage.purgeableBytes)}`} hint={t.adminStats.purgeableHint} />
               <StoragePurge purgeableFiles={storage.purgeableFiles} t={t} />
+            </div>
+            <div className="stat-card">
+              <Row label={t.adminStats.legacy} value={`${legacyFiles} · ${formatBytes(storage.legacyBytes ?? 0)}`} hint={t.adminStats.legacyHint} />
+              <ThumbnailBackfill legacyFiles={legacyFiles} t={t} />
             </div>
           </div>
         </section>
