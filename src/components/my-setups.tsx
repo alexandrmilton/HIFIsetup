@@ -37,7 +37,7 @@ export function MySetups({ setups, t }: { setups: Setup[]; t: Dictionary }) {
       {setups.map((setup) => (
         <li className="my-setup" key={setup.slug}>
           {setup.coverUrl
-            ? <img className="my-setup-thumb" src={setup.coverUrl} alt="" />
+            ? <img className="my-setup-thumb" src={setup.coverThumbUrl ?? setup.coverUrl} alt="" />
             : <span className="my-setup-thumb my-setup-thumb-empty" aria-hidden="true">🎵</span>}
           <div className="my-setup-body">
             <Link className="my-setup-title" href={`/setups/${setup.slug}`}>{setup.title}</Link>

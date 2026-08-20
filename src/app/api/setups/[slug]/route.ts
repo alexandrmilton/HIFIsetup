@@ -3,6 +3,7 @@ import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import { setupColumns, syncRelations, validate, type SetupPayload } from "@/lib/setup-payload";
 import { getDictionary } from "@/lib/i18n/server";
+import { thumbPath } from "@/lib/supabase/config";
 
 const decode = (slug: string) => { try { return decodeURIComponent(slug); } catch { return slug; } };
 
@@ -66,8 +67,11 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   // Collect the photos before the row goes: setup_images cascades away with it,
   // and storage has no foreign key to clean itself up.
   const { data: gallery } = await supabase.from("setup_images").select("path").eq("setup_id", setup.id);
-  const paths = [setup.cover_path, ...(gallery ?? []).map((image) => image.path)]
+  const stored = [setup.cover_path, ...(gallery ?? []).map((image) => image.path)]
     .filter((path): path is string => Boolean(path));
+  // Each photo may have a small copy alongside it; thumbPath returns the
+  // original for older uploads that never had one, so the set self-dedupes.
+  const paths = [...new Set([...stored, ...stored.map(thumbPath)])];
 
   const { error } = await supabase.from("setups").delete().eq("id", setup.id);
   if (error) return NextResponse.json({ error: t.errors.deleteFailed }, { status: 500 });

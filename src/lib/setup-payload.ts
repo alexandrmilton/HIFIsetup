@@ -29,6 +29,9 @@ export const setupColumns = (body: SetupPayload) => ({
 
 export function validate(body: SetupPayload, t: Dictionary): string | null {
   if (!body.title?.trim()) return t.errors.titleRequired;
+  // A setup with no photo renders as an empty placeholder card, so the
+  // wizard blocks it and so does the route behind it.
+  if (!body.coverPath?.trim()) return t.errors.photoRequired;
   if (!Array.isArray(body.components) || body.components.length === 0) return t.errors.componentRequired;
   return null;
 }

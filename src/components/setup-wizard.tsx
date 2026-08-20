@@ -8,7 +8,8 @@ import type { AudioComponent, Category, Setup } from "@/lib/types";
 import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 import { COUNTRIES } from "@/lib/countries";
 import { componentMeta } from "@/lib/component-meta";
-import { compressImage, isImage } from "@/lib/image";
+import { compressImage, isImage, makeThumbnail } from "@/lib/image";
+import { PHOTO_PREFIX, THUMB_PREFIX } from "@/lib/supabase/config";
 import { translateComponentCategory, translateSetupCategory } from "@/lib/category-i18n";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
@@ -21,6 +22,10 @@ type DraftSetup = { title: string; location: string; description: string; isPubl
 const MAX_PHOTOS = 5;
 
 type Photo = { path: string; url: string };
+
+/** Bytes the browser hands storage, both copies of one photo. */
+const uploadName = (ownerId: string, extension: string) =>
+  `${ownerId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
 
 export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t, locale }: { categories: Category[]; isSupabaseReady: boolean; ownerId: string | null; existing?: Setup; t: Dictionary; locale: Locale }) {
   const isEdit = Boolean(existing);
@@ -40,8 +45,11 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
   });
   // Index 0 is always the cover; promoting a photo just moves it to the front.
   const [photos, setPhotos] = useState<Photo[]>(() => {
-    const cover = existing?.coverPath && existing?.coverUrl ? [{ path: existing.coverPath, url: existing.coverUrl }] : [];
-    return [...cover, ...(existing?.gallery ?? [])];
+    // Tiles are small, so show the small copy where one exists.
+    const cover = existing?.coverPath && existing?.coverUrl
+      ? [{ path: existing.coverPath, url: existing.coverThumbUrl ?? existing.coverUrl }] : [];
+    const extras = (existing?.gallery ?? []).map((image) => ({ path: image.path, url: image.thumbUrl || image.url }));
+    return [...cover, ...extras];
   });
   const [uploadingCover, setUploadingCover] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -81,10 +89,18 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
         continue;
       }
       const extension = ready.type === "image/png" ? "png" : ready.type === "image/webp" ? "webp" : "jpg";
-      const path = `covers/${ownerId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+      const name = uploadName(ownerId, extension);
+      const path = `${PHOTO_PREFIX}${name}`;
       const { error } = await supabase.storage.from("setup-images").upload(path, ready, { upsert: true, contentType: ready.type });
       if (error) { setPhotoError(error.message); continue; }
-      const url = URL.createObjectURL(ready);
+
+      // The small copy lives at the same name under the thumbs prefix, so
+      // nothing has to record where it went. A failure here is not fatal:
+      // every reader falls back to the full image.
+      const thumb = await makeThumbnail(ready).catch(() => null);
+      if (thumb) await supabase.storage.from("setup-images").upload(`${THUMB_PREFIX}${name}`, thumb, { upsert: true, contentType: thumb.type });
+
+      const url = URL.createObjectURL(thumb ?? ready);
       setPhotos((current) => (current.length >= MAX_PHOTOS ? current : [...current, { path, url }]));
     }
     setUploadingCover(false);
@@ -129,6 +145,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
   function removeComponent(id: string) { setSelected((items) => items.filter((item) => item.id !== id)); }
 
   function goToComponents() {
+    if (photos.length === 0) { setPhotoError(t.wizard.errNoPhoto); return; }
     if (!setup.title.trim()) { setMessage({ type: "error", text: t.wizard.errNoTitle }); return; }
     if (!setup.country.trim()) { setMessage({ type: "error", text: t.wizard.errNoCountry }); return; }
     setMessage(null); setStep(2);
@@ -137,6 +154,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
 
   async function saveSetup() {
     if (!isSupabaseReady) { setMessage({ type: "error", text: t.auth.envNote }); return; }
+    if (photos.length === 0) { setMessage({ type: "error", text: t.wizard.errNoPhoto }); return; }
     setSaving(true);
     setMessage(null);
     const response = await fetch(isEdit ? `/api/setups/${existing!.slug}` : "/api/setups", {

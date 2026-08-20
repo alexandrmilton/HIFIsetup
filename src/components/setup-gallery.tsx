@@ -5,7 +5,9 @@ import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 
 /** Thumbnails under the hero that open full size. The cover is included as the
  *  first slide so the lightbox shows the whole set, not just the extras. */
-export function SetupGallery({ images, title, t }: { images: string[]; title: string; t: Dictionary }) {
+type Photo = { full: string; thumb: string };
+
+export function SetupGallery({ images, title, t }: { images: Photo[]; title: string; t: Dictionary }) {
   const [open, setOpen] = useState<number | null>(null);
 
   const close = useCallback(() => setOpen(null), []);
@@ -34,10 +36,11 @@ export function SetupGallery({ images, title, t }: { images: string[]; title: st
     <section className="setup-gallery">
       <p className="eyebrow">{t.gallery.heading}</p>
       <ul className="gallery-strip">
-        {images.map((url, index) => (
-          <li key={url}>
+        {images.map((photo, index) => (
+          <li key={photo.full}>
             <button type="button" className="gallery-thumb" onClick={() => setOpen(index)}>
-              <img src={url} alt={`${title} — ${index + 1}`} loading="lazy" />
+              {/* Strip paints at 120px — the small copy; the lightbox below takes the full one. */}
+              <img src={photo.thumb} alt={`${title} — ${index + 1}`} loading="lazy" />
             </button>
           </li>
         ))}
@@ -48,7 +51,7 @@ export function SetupGallery({ images, title, t }: { images: string[]; title: st
           <button type="button" className="lightbox-close" aria-label={t.gallery.close} onClick={close}>×</button>
           <button type="button" className="lightbox-nav prev" aria-label={t.gallery.prev} onClick={(event) => { event.stopPropagation(); step(-1); }}>‹</button>
           {/* Stop the click on the image itself from closing the overlay. */}
-          <img className="lightbox-image" src={images[open]} alt={`${title} — ${open + 1}`} onClick={(event) => event.stopPropagation()} />
+          <img className="lightbox-image" src={images[open].full} alt={`${title} — ${open + 1}`} onClick={(event) => event.stopPropagation()} />
           <button type="button" className="lightbox-nav next" aria-label={t.gallery.next} onClick={(event) => { event.stopPropagation(); step(1); }}>›</button>
           <p className="lightbox-counter">{format(t.gallery.counter, { n: open + 1, total: images.length })}</p>
         </div>

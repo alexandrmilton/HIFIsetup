@@ -75,7 +75,12 @@ export default async function SetupPage({ params }: PageProps<"/setups/[slug]">)
             </div>
           </div>
 
-          <SetupGallery images={[setup.coverUrl, ...setup.gallery.map((image) => image.url)].filter((url): url is string => Boolean(url))} title={setup.title} t={t} />
+          <SetupGallery
+            images={[
+              ...(setup.coverUrl ? [{ full: setup.coverUrl, thumb: setup.coverThumbUrl ?? setup.coverUrl }] : []),
+              ...setup.gallery.map((image) => ({ full: image.url, thumb: image.thumbUrl || image.url })),
+            ]}
+            title={setup.title} t={t} />
 
           {roomFacts.length > 0 && (
             <section className="room-facts">

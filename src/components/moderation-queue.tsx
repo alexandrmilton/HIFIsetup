@@ -44,7 +44,7 @@ export function ModerationQueue({ setups, canDelete, t, searchable = false }: { 
               {list.visible.map((setup) => (
                 <li className={`moderation-item status-${setup.moderationStatus}`} key={setup.slug}>
                   {setup.coverUrl
-                    ? <img className="moderation-thumb" src={setup.coverUrl} alt="" />
+                    ? <img className="moderation-thumb" src={setup.coverThumbUrl ?? setup.coverUrl} alt="" />
                     : <span className="moderation-thumb moderation-thumb-empty" aria-hidden="true">🎵</span>}
                   <div className="moderation-body">
                     <Link className="moderation-title" href={`/setups/${setup.slug}`}>{setup.title}</Link>

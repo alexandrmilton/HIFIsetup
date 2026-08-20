@@ -1,5 +1,5 @@
 import { getDemoSetup, demoSetups } from "@/lib/demo-data";
-import { hasSupabaseEnv, coverUrl } from "@/lib/supabase/config";
+import { hasSupabaseEnv, coverUrl, thumbUrl } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, ComponentOrigin, ModerationStatus, Setup, RoomDetails } from "@/lib/types";
 
@@ -45,8 +45,8 @@ const mapSetup = (row: DatabaseSetup, index = 0): Setup => {
     description: row.description ?? "Особистий простір для уважного слухання.",
     vibe: `${relations.length} компоненти`, palette: palettes[index % palettes.length],
     components: relations.map(({ component, isExtra }) => ({ id: component.id, brand: component.brand, model: component.model, category: component.category, origin: component.origin, imageUrl: component.image_url, isExtra })),
-    coverUrl: coverUrl(row.cover_path), coverPath: row.cover_path,
-    gallery: [...(row.setup_images ?? [])].sort((a, b) => a.position - b.position).map((image) => ({ url: coverUrl(image.path) ?? "", path: image.path })).filter((image) => image.url),
+    coverUrl: coverUrl(row.cover_path), coverThumbUrl: thumbUrl(row.cover_path), coverPath: row.cover_path,
+    gallery: [...(row.setup_images ?? [])].sort((a, b) => a.position - b.position).map((image) => ({ url: coverUrl(image.path) ?? "", thumbUrl: thumbUrl(image.path) ?? "", path: image.path })).filter((image) => image.url),
     categories: categoryRows.map((category) => category.name), categoryIds: categoryRows.map((category) => category.id),
     isPublished: row.is_published ?? true, moderationStatus: row.moderation_status ?? "approved",
     likeCount: row.setup_likes?.[0]?.count ?? 0,
@@ -61,8 +61,8 @@ const mapRpcSetup = (row: RpcSetup, index = 0): Setup => ({
   description: row.description ?? "Особистий простір для уважного слухання.",
   vibe: `${row.components.length} компоненти`, palette: palettes[index % palettes.length],
   components: row.components.map((component) => ({ id: component.id, brand: component.brand, model: component.model, category: component.category, origin: component.origin, imageUrl: component.image_url, isExtra: component.is_extra ?? false })),
-  coverUrl: coverUrl(row.cover_path), coverPath: row.cover_path,
-  gallery: (row.images ?? []).map((path) => ({ url: coverUrl(path) ?? "", path })).filter((image) => image.url),
+  coverUrl: coverUrl(row.cover_path), coverThumbUrl: thumbUrl(row.cover_path), coverPath: row.cover_path,
+  gallery: (row.images ?? []).map((path) => ({ url: coverUrl(path) ?? "", thumbUrl: thumbUrl(path) ?? "", path })).filter((image) => image.url),
   categories: row.categories ?? [], categoryIds: [],
   isPublished: row.is_published, moderationStatus: row.moderation_status,
   likeCount: row.like_count ?? 0,

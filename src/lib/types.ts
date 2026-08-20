@@ -21,9 +21,11 @@ export type Setup = {
   palette: { background: string; wall: string };
   components: AudioComponent[];
   coverUrl: string | null;
+  /** Small copy for cards and lists; falls back to coverUrl for older photos. */
+  coverThumbUrl: string | null;
   coverPath: string | null;
   /** Extra photos beyond the cover, in display order. */
-  gallery: { url: string; path: string }[];
+  gallery: { url: string; thumbUrl: string; path: string }[];
   categories: string[];
   categoryIds: string[];
   isPublished: boolean;

@@ -61,7 +61,8 @@ function SetupCover({ setup, top, t }: { setup: Setup; top?: number; t: Dictiona
       <OriginFlags setup={setup} t={t} />
     </>
   );
-  if (setup.coverUrl) return <div className="setup-cover" style={{ backgroundImage: `url(${setup.coverUrl})` }}>{badges}</div>;
+  // Cards paint at ~255px, so they take the small copy, never the 2000px original.
+  if (setup.coverUrl) return <div className="setup-cover" style={{ backgroundImage: `url(${setup.coverThumbUrl ?? setup.coverUrl})` }}>{badges}</div>;
   return (
     <div className="setup-cover setup-cover-empty" style={{ "--card-bg": setup.palette.background, "--wall": setup.palette.wall } as React.CSSProperties}>
       <div className="cover-wall" /><div className="cover-record" /><div className="cover-speaker left" /><div className="cover-speaker right" /><div className="cover-furniture" />{badges}
