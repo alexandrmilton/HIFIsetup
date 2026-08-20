@@ -1,4 +1,4 @@
--- NOT YET APPLIED — needs a sign-off, because it widens a storage policy.
+-- Applied remotely as: thumbnail_backfill
 --
 -- Photos uploaded before thumbnails existed sit under `covers/` and have no
 -- small copy, so cards still download the full image for them. Generating one
