@@ -71,6 +71,10 @@ export function ThumbnailBackfill({ legacyFiles, t }: { legacyFiles: number; t: 
 
         const repoint = await supabase.rpc("repoint_photo", { p_old: photo.path, p_new: `${PHOTO_PREFIX}${name}` });
         if (repoint.error) throw repoint.error;
+
+        // Nothing points at the original any more, so retire it here rather
+        // than leaving a sweep to notice it later.
+        await supabase.storage.from("setup-images").remove([photo.path]);
         converted += 1;
       } catch {
         failed += 1;

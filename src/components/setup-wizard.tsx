@@ -21,7 +21,13 @@ type DraftSetup = { title: string; location: string; description: string; isPubl
 // downscales in the browser to what the bucket will take.
 const MAX_PHOTOS = 5;
 
-type Photo = { path: string; url: string };
+/** A photo is either already in storage (an edit opened on a saved setup)
+ *  or still only in memory, waiting for the save that gives it a home. */
+type Photo = {
+  path: string | null;
+  url: string;
+  pending: { full: File; thumb: File | null } | null;
+};
 
 /** Bytes the browser hands storage, both copies of one photo. */
 const uploadName = (ownerId: string, extension: string) =>
@@ -47,8 +53,8 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
   const [photos, setPhotos] = useState<Photo[]>(() => {
     // Tiles are small, so show the small copy where one exists.
     const cover = existing?.coverPath && existing?.coverUrl
-      ? [{ path: existing.coverPath, url: existing.coverThumbUrl ?? existing.coverUrl }] : [];
-    const extras = (existing?.gallery ?? []).map((image) => ({ path: image.path, url: image.thumbUrl || image.url }));
+      ? [{ path: existing.coverPath, url: existing.coverThumbUrl ?? existing.coverUrl, pending: null }] : [];
+    const extras = (existing?.gallery ?? []).map((image) => ({ path: image.path, url: image.thumbUrl || image.url, pending: null }));
     return [...cover, ...extras];
   });
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -66,11 +72,12 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
   const [saving, setSaving] = useState(false);
   const [savedSlug, setSavedSlug] = useState<string | null>(null);
   const coverInput = useRef<HTMLInputElement>(null);
-  // Paths this session put in storage, so removePhoto knows which files it
-  // may delete outright and which belong to the setup as already saved.
-  const uploadedHere = useRef(new Set<string>());
+  // Photos the member took off a saved setup. Their files stay put until the
+  // save goes through, because cancelling the edit must leave the live page
+  // exactly as it was.
+  const droppedPaths = useRef<string[]>([]);
 
-  async function uploadPhotos(event: ChangeEvent<HTMLInputElement>) {
+  async function addPhotos(event: ChangeEvent<HTMLInputElement>) {
     const chosen = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (!chosen.length || !isSupabaseReady || !ownerId) return;
@@ -82,7 +89,6 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
     setPhotoError(chosen.length > room ? format(t.wizard.errTooManyPhotos, { max: MAX_PHOTOS }) : null);
 
     setUploadingCover(true);
-    const supabase = createClient();
     for (const file of batch) {
       let ready: File;
       try {
@@ -91,24 +97,51 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
         setPhotoError(t.wizard.errCompress);
         continue;
       }
-      const extension = ready.type === "image/png" ? "png" : ready.type === "image/webp" ? "webp" : "jpg";
-      const name = uploadName(ownerId, extension);
-      const path = `${PHOTO_PREFIX}${name}`;
-      const { error } = await supabase.storage.from("setup-images").upload(path, ready, { upsert: true, contentType: ready.type });
-      if (error) { setPhotoError(error.message); continue; }
-
-      // The small copy lives at the same name under the thumbs prefix, so
-      // nothing has to record where it went. A failure here is not fatal:
-      // every reader falls back to the full image.
+      // Nothing goes to storage here. Compressing is the slow part and it still
+      // happens now, but the bytes wait in memory until the setup is saved — a
+      // photo picked and then thought better of never reaches the bucket, and a
+      // closed tab leaves nothing behind to sweep.
       const thumb = await makeThumbnail(ready).catch(() => null);
-      if (thumb) await supabase.storage.from("setup-images").upload(`${THUMB_PREFIX}${name}`, thumb, { upsert: true, contentType: thumb.type });
-
       const url = URL.createObjectURL(thumb ?? ready);
-      uploadedHere.current.add(path);
-      setPhotos((current) => (current.length >= MAX_PHOTOS ? current : [...current, { path, url }]));
+      setPhotos((current) => (current.length >= MAX_PHOTOS ? current : [...current, { path: null, url, pending: { full: ready, thumb } }]));
     }
     setUploadingCover(false);
   }
+
+  /** Puts the held bytes in the bucket, in the order the tiles are shown.
+   *  `stored` is every path the setup should record; `fresh` is the subset this
+   *  call created, and the only one safe to undo — the rest are photos the
+   *  setup is already published with. */
+  async function uploadPending(owner: string): Promise<{ stored: string[]; fresh: string[] }> {
+    const supabase = createClient();
+    const stored: string[] = [];
+    const fresh: string[] = [];
+    for (const photo of photos) {
+      if (photo.path) { stored.push(photo.path); continue; }
+      if (!photo.pending) continue;
+      const { full, thumb } = photo.pending;
+      const extension = full.type === "image/png" ? "png" : full.type === "image/webp" ? "webp" : "jpg";
+      const name = uploadName(owner, extension);
+      const path = `${PHOTO_PREFIX}${name}`;
+      const { error } = await supabase.storage.from("setup-images").upload(path, full, { upsert: true, contentType: full.type });
+      if (error) throw Object.assign(new Error(error.message), { uploaded: fresh });
+      stored.push(path);
+      fresh.push(path);
+      // The small copy lives at the same name under the thumbs prefix, so
+      // nothing has to record where it went. A failure here is not fatal:
+      // every reader falls back to the full image.
+      if (thumb) await supabase.storage.from("setup-images").upload(`${THUMB_PREFIX}${name}`, thumb, { upsert: true, contentType: thumb.type });
+    }
+    return { stored, fresh };
+  }
+
+  /** Takes files back out of the bucket, both copies. Used to undo a half-done
+   *  save, and to retire photos dropped from a setup once the save lands. */
+  const discard = (paths: string[]) => {
+    const fresh = paths.filter(Boolean);
+    if (fresh.length === 0) return;
+    void createClient().storage.from("setup-images").remove(fresh.flatMap((path) => [path, thumbPath(path)]));
+  };
 
   const makeCover = (index: number) => setPhotos((current) => {
     if (index <= 0 || index >= current.length) return current;
@@ -116,21 +149,14 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
     const [promoted] = next.splice(index, 1);
     return [promoted, ...next];
   });
-  /** Files land in storage the moment a photo is picked, long before the setup
-   *  is saved — so picking one and changing your mind used to leave both copies
-   *  behind for an admin to sweep by hand. Anything uploaded in this session is
-   *  ours to drop straight away. A photo that was already on the setup when the
-   *  form opened is left alone: the row still points at it until the edit is
-   *  saved, and cancelling must not break the live page. */
+  /** A photo that never made it to storage just disappears. One that came with
+   *  the setup is remembered instead, and its files go only once the save that
+   *  drops it actually succeeds. */
   const removePhoto = (index: number) => {
     setPhotoError(null);
     const photo = photos[index];
-    // Outside the state updater: React may run that twice in development, and
-    // firing the delete twice would be a wasted round-trip each time.
-    if (photo && uploadedHere.current.has(photo.path)) {
-      uploadedHere.current.delete(photo.path);
-      void createClient().storage.from("setup-images").remove([photo.path, thumbPath(photo.path)]);
-    }
+    if (photo?.pending) URL.revokeObjectURL(photo.url);
+    if (photo?.path) droppedPaths.current.push(photo.path);
     setPhotos((current) => current.filter((_, i) => i !== index));
   };
 
@@ -175,16 +201,38 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
   async function saveSetup() {
     if (!isSupabaseReady) { setMessage({ type: "error", text: t.auth.envNote }); return; }
     if (photos.length === 0) { setMessage({ type: "error", text: t.wizard.errNoPhoto }); return; }
+    if (!ownerId) { setMessage({ type: "error", text: t.auth.envNote }); return; }
     setSaving(true);
     setMessage(null);
+
+    // The photos reach the bucket here, at the last possible moment. Anything
+    // that goes in and then cannot be recorded comes straight back out, so a
+    // failed save leaves storage exactly as it found it.
+    let stored: string[];
+    let fresh: string[];
+    try {
+      ({ stored, fresh } = await uploadPending(ownerId));
+    } catch (error) {
+      discard((error as { uploaded?: string[] }).uploaded ?? []);
+      setSaving(false);
+      setMessage({ type: "error", text: (error as Error).message || t.wizard.errUpload });
+      return;
+    }
+
     const response = await fetch(isEdit ? `/api/setups/${existing!.slug}` : "/api/setups", {
       method: isEdit ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...setup, coverPath: photos[0]?.path ?? null, galleryPaths: photos.slice(1).map((photo) => photo.path), components: selected, extras }),
+      body: JSON.stringify({ ...setup, coverPath: stored[0] ?? null, galleryPaths: stored.slice(1), components: selected, extras }),
     });
     const payload = await response.json();
     setSaving(false);
-    if (!response.ok) { setMessage({ type: "error", text: payload.error ?? "Error" }); return; }
+    if (!response.ok) { discard(fresh); setMessage({ type: "error", text: payload.error ?? "Error" }); return; }
+
+    // Saved. The photos taken off the setup are no longer reachable from any
+    // row, so retire them now rather than leaving them for a sweep later.
+    discard(droppedPaths.current);
+    droppedPaths.current = [];
+    setPhotos(stored.map((path, index) => ({ path, url: photos[index]?.url ?? "", pending: null })));
     setSavedSlug(payload.slug);
     setMessage({ type: "success", text: isEdit ? t.wizard.savedEdit : t.wizard.moderationTitle });
   }
@@ -233,7 +281,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
                 <p className="field-hint photo-hint">{format(t.wizard.photoCount, { n: photos.length, max: MAX_PHOTOS })} · {t.wizard.photoHint}</p>
               </div>
             )}
-            <input ref={coverInput} type="file" accept="image/*" multiple hidden onChange={uploadPhotos} />
+            <input ref={coverInput} type="file" accept="image/*" multiple hidden onChange={addPhotos} />
             <div className="field"><label htmlFor="setup-title">{t.wizard.title}</label><input id="setup-title" required placeholder={t.wizard.titlePlaceholder} value={setup.title} onChange={(event) => setSetup({ ...setup, title: event.target.value })} /></div>
             <div className="field"><label htmlFor="setup-description">{t.wizard.description}</label><textarea id="setup-description" placeholder={t.wizard.descriptionPlaceholder} value={setup.description} onChange={(event) => setSetup({ ...setup, description: event.target.value })} /></div>
             <div className="two-fields">
