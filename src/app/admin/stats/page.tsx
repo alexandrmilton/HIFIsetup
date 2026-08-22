@@ -48,9 +48,15 @@ export default async function AdminStatsPage() {
   if (!profile?.isAdmin) notFound();
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_admin_stats");
+  // The same scan the purge button acts on, so the list and the count can never
+  // disagree — "5 purgeable" with nothing named was the whole complaint.
+  const [{ data, error }, { data: orphanList }] = await Promise.all([
+    supabase.rpc("get_admin_stats"),
+    supabase.rpc("list_orphan_images", { p_min_age_hours: 24 }),
+  ]);
   if (error || !data) notFound();
   const stats = data as Stats;
+  const orphans = (orphanList as { path: string; bytes: number; created_at: string }[] | null) ?? [];
   const { storage, database, content } = stats;
   // Absent until the backfill migration lands, so the card degrades to zero
   // rather than rendering "undefined · NaN" on a deploy that arrives first.
@@ -85,6 +91,16 @@ export default async function AdminStatsPage() {
               <Row label={t.adminStats.orphans} value={`${storage.orphanFiles} · ${formatBytes(storage.orphanBytes)}`} hint={t.adminStats.orphansHint} />
               <Row label={t.adminStats.purgeable} value={`${storage.purgeableFiles} · ${formatBytes(storage.purgeableBytes)}`} hint={t.adminStats.purgeableHint} />
               <StoragePurge purgeableFiles={storage.purgeableFiles} t={t} />
+              {orphans.length > 0 && (
+                <ul className="orphan-list">
+                  {orphans.map((file) => (
+                    <li key={file.path}>
+                      <code>{file.path}</code>
+                      <span>{formatBytes(Number(file.bytes ?? 0))} · {new Date(file.created_at).toLocaleDateString()}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="stat-card">
               <Row label={t.adminStats.legacy} value={`${legacyFiles} · ${formatBytes(storage.legacyBytes ?? 0)}`} hint={t.adminStats.legacyHint} />

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import { getDictionary } from "@/lib/i18n/server";
-import { THUMB_PREFIX } from "@/lib/supabase/config";
 
 /** Files younger than this may still belong to a wizard someone has open. */
 const MIN_AGE_HOURS = 24;
@@ -24,11 +23,13 @@ export async function DELETE() {
     return NextResponse.json({ error: forbidden ? t.errors.forbidden : t.errors.purgeFailed }, { status: forbidden ? 403 : 500 });
   }
 
-  // Thumbnails are not referenced by any row — they are derived from a path
-  // that is. Sweeping them would strip every small copy, so they are removed
-  // only alongside the photo they belong to, by the setup delete route.
-  const orphans = ((data as { path: string; bytes: number }[] | null) ?? [])
-    .filter((file) => !file.path.startsWith(THUMB_PREFIX));
+  // No filtering here any more. This used to drop everything under the thumbs
+  // prefix, because the scan predated thumbnails and reported every small copy
+  // as unreferenced. The scan now resolves a thumbnail through the photo it
+  // belongs to, so a thumbnail reaching this point has genuinely lost its
+  // photo — and the old guard did nothing but keep those alive forever, while
+  // still counting them as purgeable.
+  const orphans = (data as { path: string; bytes: number }[] | null) ?? [];
   if (orphans.length === 0) return NextResponse.json({ removed: 0, bytes: 0 });
 
   const { data: removed, error: removeError } = await supabase.storage

@@ -9,7 +9,7 @@ import { format, type Dictionary } from "@/lib/i18n/dictionaries";
 import { COUNTRIES } from "@/lib/countries";
 import { componentMeta } from "@/lib/component-meta";
 import { compressImage, isImage, makeThumbnail } from "@/lib/image";
-import { PHOTO_PREFIX, THUMB_PREFIX } from "@/lib/supabase/config";
+import { PHOTO_PREFIX, THUMB_PREFIX, thumbPath } from "@/lib/supabase/config";
 import { translateComponentCategory, translateSetupCategory } from "@/lib/category-i18n";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
@@ -66,6 +66,9 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
   const [saving, setSaving] = useState(false);
   const [savedSlug, setSavedSlug] = useState<string | null>(null);
   const coverInput = useRef<HTMLInputElement>(null);
+  // Paths this session put in storage, so removePhoto knows which files it
+  // may delete outright and which belong to the setup as already saved.
+  const uploadedHere = useRef(new Set<string>());
 
   async function uploadPhotos(event: ChangeEvent<HTMLInputElement>) {
     const chosen = Array.from(event.target.files ?? []);
@@ -101,6 +104,7 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
       if (thumb) await supabase.storage.from("setup-images").upload(`${THUMB_PREFIX}${name}`, thumb, { upsert: true, contentType: thumb.type });
 
       const url = URL.createObjectURL(thumb ?? ready);
+      uploadedHere.current.add(path);
       setPhotos((current) => (current.length >= MAX_PHOTOS ? current : [...current, { path, url }]));
     }
     setUploadingCover(false);
@@ -112,7 +116,23 @@ export function SetupWizard({ categories, isSupabaseReady, ownerId, existing, t,
     const [promoted] = next.splice(index, 1);
     return [promoted, ...next];
   });
-  const removePhoto = (index: number) => { setPhotoError(null); setPhotos((current) => current.filter((_, i) => i !== index)); };
+  /** Files land in storage the moment a photo is picked, long before the setup
+   *  is saved — so picking one and changing your mind used to leave both copies
+   *  behind for an admin to sweep by hand. Anything uploaded in this session is
+   *  ours to drop straight away. A photo that was already on the setup when the
+   *  form opened is left alone: the row still points at it until the edit is
+   *  saved, and cancelling must not break the live page. */
+  const removePhoto = (index: number) => {
+    setPhotoError(null);
+    const photo = photos[index];
+    // Outside the state updater: React may run that twice in development, and
+    // firing the delete twice would be a wasted round-trip each time.
+    if (photo && uploadedHere.current.has(photo.path)) {
+      uploadedHere.current.delete(photo.path);
+      void createClient().storage.from("setup-images").remove([photo.path, thumbPath(photo.path)]);
+    }
+    setPhotos((current) => current.filter((_, i) => i !== index));
+  };
 
   // Only ask the browser when the member opts in; a denial simply leaves the
   // dropdown untouched rather than guessing.
